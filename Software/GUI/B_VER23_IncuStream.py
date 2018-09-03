@@ -416,7 +416,7 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
         self.pushButtonBCKGND.setEnabled(False)
         self.pushButtonBCKGND2.setEnabled(False)
         try:
-            back_file = QFileDialog.getOpenFileName(form,"Select Background Image...","C:\\Incuscope","Background files (BG*.png)")
+            back_file = QFileDialog.getOpenFileName(form,"Select Background Image...","C:\IncuScope","Background files (BG*.png)")
             glob.os.chdir('C:\Incuscope')
             self.folder=glob.os.getcwd()
             self.IM_BACKGND=cv2.imread(back_file)
@@ -428,7 +428,7 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
             self.pushButtonBCKGND2.setEnabled(True)
    
     def handleAbout(self):
-        QMessageBox.about(self,"About Incu-Stream", "This program is developed under GNU General Public License (GNU GPL v3).\n Developed By: Guray Gurkan, PhD \n e-mail: guray_gurkan@yahoo.co.uk")
+        QMessageBox.about(self,"About Incu-Stream", "This program is developed under GNU General Public License (GNU GPL v3).\n Developed By: Guray Gurkan, PhD \n Git-Hub Page: https://github.com/GurayGurkan \n e-mail: guray_gurkan@yahoo.co.uk")
     ### ------------------------------- Tab 1 Functions ---------------------------
     def DetectPorts(self):
         
@@ -1302,7 +1302,7 @@ class updatebackgroundTASK(QThread):
                 time.sleep(2)
                 message="Ready..."
                 self.status_updater.emit(message)
-                return True
+                
         except serial.SerialException:
             message="Error in 'backgroundTASK' ..."
             
@@ -1562,7 +1562,7 @@ class serialTask(QThread):
                         cap.release()
                         cv2.destroyAllWindows()
                       
-                        return True
+                        
                     except Exception:
                         message="Error..."
                         
@@ -1583,7 +1583,7 @@ class serialTask(QThread):
                 self.message="Port can not be opened..."
                 self.status_updater.emit(self.message)
                 sendStatus(self.message)
-                return False
+                
     
         
 class LiveMovement(QThread):
