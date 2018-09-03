@@ -416,7 +416,7 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
         self.pushButtonBCKGND.setEnabled(False)
         self.pushButtonBCKGND2.setEnabled(False)
         try:
-            back_file = QFileDialog.getOpenFileName(form,"Select Background Image...","C:\\Cell-win","Background files (BG*.png)")
+            back_file = QFileDialog.getOpenFileName(form,"Select Background Image...","C:\\Incuscope","Background files (BG*.png)")
             glob.os.chdir('C:\Incuscope')
             self.folder=glob.os.getcwd()
             self.IM_BACKGND=cv2.imread(back_file)
