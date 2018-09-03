@@ -7,11 +7,12 @@
 """
 # autofocusing added
 # plate type vs. cell subgrid animation added
-# e-mail option added
+# e-mail option added, now optional 
 # background capture added
 # lens (fine focus) control added
 #  XLSWrite OK
 # background enhancement added
+
 
 import guidata
 import guiqwt
@@ -232,7 +233,7 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
             self.pushButton_8.clicked.connect(self.updateWellInfo)
             self.pushButton_9.clicked.connect(self.clearWellInfo)
             self.groupBox_6.setEnabled(False)
-            #glob.os.chdir('E:\LKG\PROJECT_Cell_Count\Python_Kodlar')
+            
             
             self.UpdateDuration()
             self.UpdatePeriod()
@@ -254,14 +255,9 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
             self.buttonXp.clicked.connect(self.handleStepMove)
             self.buttonYn.clicked.connect(self.handleStepMove)
             self.buttonYp.clicked.connect(self.handleStepMove)
-            
-#            self.buttonZn2.clicked.connect(self.handleStepMove)
-#            self.buttonZp2.clicked.connect(self.handleStepMove)
-#            self.buttonZn.clicked.connect(self.handleStepMove)
-#            self.buttonZp.clicked.connect(self.handleStepMove)
 
-         
             self.buttonGo.clicked.connect(self.handleGO)
+            
             self.buttonMailtest.clicked.connect(self.setMail)
             
             self.connect(self.verticalSlider,  SIGNAL("valueChanged(int)"),self.Change_Bri)            
@@ -280,9 +276,7 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
             self.buttonLensSetOrigin.clicked.connect(self.setLensOrigin)
             self.buttonLensReset.clicked.connect(self.LensToOrigin)
             self.buttonLensSavePosition.clicked.connect(self.LensSavePosition)
-            
-            
-            
+        
             #-----------  09.08.2108 End
             
             
@@ -675,10 +669,7 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
                     file_name= 'SM_{}_{}_{}_{}_{}_{}'.format(pctime[0],pctime[1],pctime[2],pctime[3],pctime[4],pctime[5])
                 self.addlog("Folder created.")
                 glob.os.mkdir(file_name)
-                
-                             
-                
-                
+         
                 self.filename_glob=file_name
                 glob.os.chdir(self.folder + "/" + self.filename_glob)
                 if self.subgrid_params.flag:
@@ -977,8 +968,8 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
                 event.ignore()
                 
     def cancel_all(self):
-        secim = QMessageBox.question(self,"Exit...", "Are you sure?",QMessageBox.Yes |  QMessageBox.No)
-        if secim ==QMessageBox.Yes:
+        choice = QMessageBox.question(self,"Exit...", "Are you sure?",QMessageBox.Yes |  QMessageBox.No)
+        if choice ==QMessageBox.Yes:
             self.timerImaging.stop()
             self.timerBackcount.stop()
             self.task.terminate()
@@ -1522,9 +1513,7 @@ class serialTask(QThread):
                                             grid_counter +=1
                                             self.overall=(local_counter-1) + grid_counter + (form.repeats-1)*(form.well_count * int(form.subgrid_params.Ncols) * int(form.subgrid_params.Ncols))
                                             self.progressbar_updater.emit((local_counter-1) + grid_counter,self.overall)
-                                            
-                                            
-                                    
+                                 
                                     mainframe = np.hstack((Vframe,mainframe))
                                     del Vframe
                                     print "Column end"
@@ -1535,13 +1524,6 @@ class serialTask(QThread):
                                     if inByte=='W':
                                         not_shaked=False
                                 gray = mainframe
-                                # reverse lens
-#                                for cc in range(zlevel):
-#                                    ser.write('zn')
-#                                    done = False
-#                                    while not done:
-#                                        if ser.read() == 'O':
-#                                            done = True
                                 
                                 
                             else: # non-subgrid
@@ -1739,19 +1721,20 @@ def cartesianGrid(pic,W,H,Ox,Oy,C,R):
         pic.drawLine(Ox+rangeX[0]*W/2.0, Oy+rangeY[rows]*H/2 ,Ox+rangeX[-1]*W/2.0,Oy+rangeY[rows]*H/2)
     
 
-def sendStatus(msg):    
-    fromaddr = form.lineSender.text().toLocal8Bit().data()
-    toaddrs  = {form.lineRecep1.text().toLocal8Bit().data(),form.lineRecep2.text().toLocal8Bit().data(),form.lineRecep3.text().toLocal8Bit().data()}
-    msg = 'Subject: %s\n\n%s' % ('Incu-Stream Status', msg)
-    username = form.lineSender.text().toLocal8Bit().data()
-    password = form.linePass.text().toLocal8Bit().data()
-    print "ok-1579"
-    server = smtplib.SMTP(form.lineSMTP.text().toLocal8Bit().data())  #'smtp.live.com:587'
-    server.ehlo()
-    server.starttls()
-    server.login(username,password)
-    server.sendmail(fromaddr, toaddrs, msg)
-    server.quit()
+def sendStatus(msg):
+    if form.groupBox_9.isChecked():
+        fromaddr = form.lineSender.text().toLocal8Bit().data()
+        toaddrs  = {form.lineRecep1.text().toLocal8Bit().data(),form.lineRecep2.text().toLocal8Bit().data(),form.lineRecep3.text().toLocal8Bit().data()}
+        msg = 'Subject: %s\n\n%s' % ('Incu-Stream Status', msg)
+        username = form.lineSender.text().toLocal8Bit().data()
+        password = form.linePass.text().toLocal8Bit().data()
+        print "ok-1579"
+        server = smtplib.SMTP(form.lineSMTP.text().toLocal8Bit().data())  #'smtp.live.com:587'
+        server.ehlo()
+        server.starttls()
+        server.login(username,password)
+        server.sendmail(fromaddr, toaddrs, msg)
+        server.quit()
 
 def makehomogen(inp,aspect,offset):
     inp = inp.astype('float')

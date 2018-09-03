@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'Gui_CellCount_18_MainWindow.ui'
+# Form implementation generated from reading ui file '.\Gui_CellCount_18_MainWindow.ui'
 #
-# Created: Thu Aug 16 13:56:01 2018
+# Created: Mon Sep 03 12:05:12 2018
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -255,6 +255,8 @@ class Ui_MainWindow(object):
         self.buttonSaveParams.setObjectName(_fromUtf8("buttonSaveParams"))
         self.groupBox_9 = QtGui.QGroupBox(self.tab_5)
         self.groupBox_9.setGeometry(QtCore.QRect(10, 360, 641, 91))
+        self.groupBox_9.setCheckable(True)
+        self.groupBox_9.setChecked(False)
         self.groupBox_9.setObjectName(_fromUtf8("groupBox_9"))
         self.gridLayout_9 = QtGui.QGridLayout(self.groupBox_9)
         self.gridLayout_9.setMargin(2)
@@ -652,7 +654,7 @@ class Ui_MainWindow(object):
         self.pushButton_HALT.setObjectName(_fromUtf8("pushButton_HALT"))
         self.horizontalLayout.addWidget(self.pushButton_HALT)
         self.groupBox_5 = QtGui.QGroupBox(self.tab)
-        self.groupBox_5.setGeometry(QtCore.QRect(40, 468, 541, 71))
+        self.groupBox_5.setGeometry(QtCore.QRect(40, 450, 541, 91))
         font = QtGui.QFont()
         font.setBold(False)
         font.setWeight(50)
@@ -681,7 +683,7 @@ class Ui_MainWindow(object):
         self.progressParadigm.setTextDirection(QtGui.QProgressBar.TopToBottom)
         self.progressParadigm.setObjectName(_fromUtf8("progressParadigm"))
         self.countStatus = QtGui.QLabel(self.groupBox_5)
-        self.countStatus.setGeometry(QtCore.QRect(10, 60, 201, 16))
+        self.countStatus.setGeometry(QtCore.QRect(10, 60, 231, 16))
         font = QtGui.QFont()
         font.setPointSize(9)
         font.setBold(False)
