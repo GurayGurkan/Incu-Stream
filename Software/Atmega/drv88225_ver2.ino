@@ -40,10 +40,11 @@ int TRAY_pin = 5;
 // ***********************************
 //  Well Plates vs. Steps required for TPP
 //**************************************
-unsigned long aralik[5] = {30016, 19968, 15232, 6400, 7296}; // in "1/32" Steps
+unsigned long aralik[5] = {30016, 19968, 15200, 6400, 7200}; // in "1/32" Steps
+// In mm  {38, 25 , 19, ?, 9}; // in "1/32" Steps
 
 // OFFSETS for A-1 Well Location
-unsigned long X_offset[5] = {0, 0, 55200, 0, 53376};
+unsigned long X_offset[5] = {0, 0, 55200, 0, 53664};
 unsigned long Y_offset[5] = {3200, 3200, 15200, 3200, 14304};
 
 // SUB- GRID CAMERA SHIFT steps for non-overlap
