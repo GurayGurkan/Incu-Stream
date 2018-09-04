@@ -21,7 +21,7 @@ import numpy as np
 import cv2.cv as cv
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
-import Gui_CellCount_18_MainWindow
+import Gui_IncuStream
 import sys
 import glob
 import serial
@@ -37,7 +37,7 @@ import smtplib
 
 
 
-class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
+class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
     well = {}
     well_mask = []
     #plate_type = {0:'6 Well Plate',1:'12 Well Plate',2:'24 Well Plate',3:'48 Well Plate', 4:'96 Well Plate'}
@@ -156,27 +156,28 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
             
         
             if c>0:
-                self.comboBox_3.setCurrentIndex(-1)
+                self.comboBox_ports.setCurrentIndex(-1)
                 for a in range(c):
-                    self.comboBox_3.addItem(self.ports[a])
+                    self.comboBox_ports.addItem(self.ports[a])
                 self.statusbar.showMessage("Device connected...")
                 self.groupBox_2.setEnabled(True)
-                self.groupBox_3.setEnabled(True)
+                self.groupBox_timelapse.setEnabled(True)
                 self.buttonSaveParams.setEnabled(True)
-                self.pushButton_2.setEnabled(True)
+                self.pushButton_START.setEnabled(True)
                 
                 
             else:
                 self.statusbar.showMessage('No device connected...')
                 self.groupBox_2.setEnabled(True) ###
-                self.groupBox_3.setEnabled(False)
-                self.pushButton_2.setEnabled(False)
+                self.groupBox_timelapse.setEnabled(False)
+                self.pushButton_START.setEnabled(False)
                 
             ######################################################################
                 
                 
-            self.timerCamera = QTimer()
-            self.timerImaging = QTimer()
+            self.timerCamera = QTimer() #LiveView
+            
+            self.timerImaging = QTimer() # Automated
             self.timerBackcount = QTimer()
             
             
@@ -222,17 +223,17 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
             
             self.timerCamera.timeout.connect(self.Getframe)
             self.buttonSaveParams.clicked.connect(self.ConfirmSetup)
-            self.pushButton_2.clicked.connect(self.StartAcquisition)
+            self.pushButton_START.clicked.connect(self.StartAcquisition)
             
             self.pushButton_HALT.clicked.connect(self.cancel_all)
             
-            self.groupBox_3.clicked.connect(self.repeatControl)
+            self.groupBox_timelapse.clicked.connect(self.repeatControl)
             self.dial_duration.valueChanged.connect(self.UpdateDuration)
             self.dial_period.valueChanged.connect(self.UpdatePeriod)
             
-            self.pushButton_8.clicked.connect(self.updateWellInfo)
-            self.pushButton_9.clicked.connect(self.clearWellInfo)
-            self.groupBox_6.setEnabled(False)
+            self.pushButton_savewellprops.clicked.connect(self.updateWellInfo)
+            self.pushButton_clearwellprops.clicked.connect(self.clearWellInfo)
+            self.groupBox_wellprops.setEnabled(False)
             
             
             self.UpdateDuration()
@@ -240,7 +241,7 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
             
             #TOOLTIPS
             self.buttonSaveParams.setToolTip("Save Parameters")
-            self.pushButton_2.setToolTip("Start count")
+            self.pushButton_START.setToolTip("Start count")
             self.pushButton_HALT.setToolTip("Stop count")
             self.dial_duration.setToolTip("Set duration (in hours)")
             self.dial_period.setToolTip("Set period (in minutes)")
@@ -249,7 +250,7 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
             self.buttonStartLive.clicked.connect(self.StartLive)
             self.buttonStopLive.clicked.connect(self.StopLive)
             self.buttonSnapshot.clicked.connect(self.SingleShot)
-            self.pushButton_7.clicked.connect(self.SelectFolder)
+            self.pushButton_folderselect.clicked.connect(self.SelectFolder)
 
             self.buttonXn.clicked.connect(self.handleStepMove)
             self.buttonXp.clicked.connect(self.handleStepMove)
@@ -280,13 +281,13 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
             #-----------  09.08.2108 End
             
             
-            p=QPixmap(800,600)
-            p.fill(Qt.black)
-            self.label_2.setPixmap(p)
-            self.label_2.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+            p=QPixmap(640,480)
+            p.fill(Qt.blue)
+            self.label_CanvasLive.setPixmap(p)
+            self.label_CanvasLive.setAlignment(Qt.AlignTop | Qt.AlignLeft)
             self.setMouseTracking(True)
-            self.label_2.setMouseTracking(True)
-            self.label_2.installEventFilter(self)
+            self.label_CanvasLive.setMouseTracking(True)
+            self.label_CanvasLive.installEventFilter(self)
             
             
             self.sliderFocuserCoarse.valueChanged.connect(self.changeCoarseLenslevel)
@@ -446,7 +447,7 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
                 pass
             
     def repeatControl(self):
-        if self.groupBox_3.isChecked():
+        if self.groupBox_timelapse.isChecked():
             
             self.repeatFLAG=True;
         else:
@@ -459,8 +460,8 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
         self.list_wellinfo={}
         self.well_mask=[]
         self.focusCF=[]
-        self.comboLive.clear()
-        H=self.groupBox.height()
+        self.combo_targetwell.clear()
+        H=self.groupBox_wells.height()
         
         self.Well_OFF = self.Well_OFF.scaled(H/cols,H/cols,Qt.KeepAspectRatio)
         self.Well_ON = self.Well_ON.scaled(H/cols,H/cols,Qt.KeepAspectRatio)
@@ -504,7 +505,7 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
                         self.list_wellinfo[(xi,yi)].Well_ID=self.letters[xi-1] + '-' + str(yi)
                         self.list_wellinfo[(xi,yi)].row = xi
                         self.list_wellinfo[(xi,yi)].column = yi
-                        self.comboLive.addItem(self.list_wellinfo[(xi,yi)].Well_ID)
+                        self.combo_targetwell.addItem(self.list_wellinfo[(xi,yi)].Well_ID)
                         
         self.gridLayout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
 
@@ -529,13 +530,13 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
             self.well_mask[index]=True
             self.lineWP0.setText(self.list_wellinfo[index].Well_ID)
             
-            self.groupBox_6.setEnabled(True)
+            self.groupBox_wellprops.setEnabled(True)
             
         else:
             self.sender().setIcon(QIcon(self.Well_OFF))
             self.well_mask[index]=False
             self.lineWP0.setText(self.list_wellinfo[index].Well_ID)
-            self.groupBox_6.setEnabled(False)
+            self.groupBox_wellprops.setEnabled(False)
         self.toggled_wellindex = index
         self.UpdateWellInfoList()
             
@@ -617,7 +618,7 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
             self.generategrid(8,12)
         
     
-        self.groupBox_6.setEnabled(True)
+        self.groupBox_wellprops.setEnabled(True)
         self.logger.clear()
         if self.Group_subgrid.isChecked():
             self.subgrid_params.flag=True
@@ -674,24 +675,26 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
                 glob.os.chdir(self.folder + "/" + self.filename_glob)
                 if self.subgrid_params.flag:
                     val = self.well_count * int(self.subgrid_params.Ncols) * int(self.subgrid_params.Nrows)
-                    self.progressPlate.setMaximum(val)
+                    self.progressOverall.setMaximum(val)
                 else:
-                    self.progressPlate.setMaximum(self.well_count)
-                self.progressPlate.setValue(0)
+                    self.progressOverall.setMaximum(self.well_count)
+                self.progressOverall.setValue(0)
+                
                 self.task = serialTask()
                 self.task.finished.connect(self.handle_taskending)
                 self.task.status_updater.connect(self.updateStatus)
                 self.task.progressbar_updater.connect(self.updateProgress)
+                
                 self.count_back=False
                 
                 if self.repeatFLAG:
                     if self.subgrid_params.flag:
                         val = self.well_count * int(self.subgrid_params.Ncols) * int(self.subgrid_params.Nrows) * self.target_repeats
-                        self.progressParadigm.setMaximum(val)
+                        self.progressCurrent.setMaximum(val)
                     else:
-                        self.progressParadigm.setMaximum(self.well_count*self.target_repeats)
+                        self.progressCurrent.setMaximum(self.well_count*self.target_repeats)
 
-                    self.progressParadigm.setValue(0)
+                    self.progressCurrent.setValue(0)
                     self.more2come=True
                     self.timerImaging.timeout.connect(self.task.start)
                     self.timer_start= self.now_str()
@@ -706,11 +709,13 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
                         val = self.well_count * int(self.subgrid_params.Ncols) * int(self.subgrid_params.Nrows)
                     else:
                         val = self.well_count
-                    self.progressParadigm.setMaximum(val)
-                    self.progressParadigm.setValue(0)
+                    self.progressCurrent.setMaximum(val)
+                    self.progressCurrent.setValue(0)
                 
                 self.task.start()
+
                 self.pushButton_HALT.setEnabled(True)
+                
             else:
                 QMessageBox.warning(self,"Incu-Stream","No wells selected!")
                 
@@ -759,9 +764,9 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
         self.timerCamera.stop()
         p=QPixmap(800,600)
         p.fill(Qt.black)
-        self.label_2.setPixmap(p)
-        self.status2.setText('Moving to target well')        
-        message= self.Wellname2Message(self.comboLive.currentText())
+        self.label_CanvasLive.setPixmap(p)
+        self.status_LiveMode.setText('Moving to target well')        
+        message= self.Wellname2Message(self.combo_targetwell.currentText())
         self.repaint()
         self.taskLive.message=message
         self.taskLive.start()
@@ -771,7 +776,7 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
         
     def handleLiveMovementEnd(self):
         self.buttonGo.setEnabled(True)        
-        self.status2.setText('Live Mode ON')        
+        self.status_LiveMode.setText('Live Mode ON')        
         self.timerCamera.start(1000/30.)
         
     def StartLive(self):
@@ -785,6 +790,7 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
           
             self.buttonStartLive.setEnabled(False)
             self.buttonStopLive.setEnabled(True)
+            self.buttonSnapshot.setEnabled(True)
             
             self.verticalSlider.setSliderPosition(self.cap_obj.get(cv.CV_CAP_PROP_BRIGHTNESS))
             self.verticalSlider_2.setSliderPosition(self.cap_obj.get(cv.CV_CAP_PROP_CONTRAST))
@@ -796,7 +802,7 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
             self.cap_obj.set(6,cv.CV_FOURCC('M', 'J', 'P', 'G') & 0xFF )
             self.verticalSlider_6.setSliderPosition(self.cap_obj.get(cv.CV_CAP_PROP_GAIN))
             self.verticalSlider_7.setSliderPosition(self.cap_obj.get(20))
-            self.status2.setText('Live Mode ON')
+            self.status_LiveMode.setText('Live Mode ON')
             self.groupBox_Focus.setEnabled(True)
             self.groupBox_CamParam.setEnabled(True)
             self.groupBox_Navigator.setEnabled(True)
@@ -815,13 +821,13 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
         self.groupBox_Focus.setEnabled(False)
         self.groupBox_CamParam.setEnabled(False)
         self.groupBox_Navigator.setEnabled(False)
-        self.status2.setText('Live Mode OFF')
-        p=QPixmap(640,360)
-        p.fill(Qt.black)
-        self.label_2.setPixmap(p)
+        self.status_LiveMode.setText('Live Mode OFF')
+        p = QPixmap(640,360)
+        p.fill(Qt.blue)
+        self.label_CanvasLive.setPixmap(p)
     
     def eventFilter(self,obj,event):
-        if obj.objectName()== "label_2" and event.type()==5:
+        if obj.objectName()== "label_CanvasLive" and event.type()==5:
             pix=obj.pixmap().toImage()
             val=(pix.pixel(event.x(),event.y()))
             red = QColor(val).red()
@@ -866,16 +872,16 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
         
         glob.os.chdir(str(self.folder))
         self.statusbar.showMessage('Files will be saved to "'  + self.folder + '"')
-        self.status2.setText('Files will be saved to "'  + self.folder + '"')
+        self.status_LiveMode.setText('Files will be saved to "'  + self.folder + '"')
         time.sleep(2)
         
-        self.status2.setText("")
+        self.status_LiveMode.setText("")
     
     def Getframe(self):
         ret,frame = self.cap_obj.read()
         pixmap = QPixmap.fromImage(self.ToQImage(frame), Qt.AutoColor)
-        pixmap = pixmap.scaled(self.label_2.width(), self.label_2.height(),Qt.KeepAspectRatio)
-        self.label_2.setPixmap(pixmap)
+        pixmap = pixmap.scaled(self.label_CanvasLive.width(), self.label_CanvasLive.height(),Qt.KeepAspectRatio)
+        self.label_CanvasLive.setPixmap(pixmap)
         
     
     
@@ -888,15 +894,15 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
         pctime=time.localtime()
         file_single= 'SnapShot_{}_{}_{}_{}_{}_{}_P'.format(pctime[0],pctime[1],pctime[2],pctime[3],pctime[4],pctime[5])
         flag =False
-        while not Flag:
-            flag, frame = cap.read()
+        while not flag:
+            flag, frame = self.cap_obj.read()
         
         cv2.imwrite(file_single + str(self.ssc) + '.jpg',frame)
         self.ssc=self.ssc+1
         self.buttonSnapshot.setEnabled(True)
-        self.status2.setText('Saved...')
+        self.status_LiveMode.setText('Saved...')
         self.timerCamera.start(1000/25);        
-        self.label_2.setMouseTracking(True)
+        self.label_CanvasLive.setMouseTracking(True)
  
     def ToQImage (self, cv_img):
         height, width, bytesPerComponent = cv_img.shape
@@ -912,9 +918,9 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
     def EnableControls(self,flag):
         self.groupBox_2.setEnabled(flag)
         self.buttonSaveParams.setEnabled(flag)
-        self.pushButton_2.setEnabled(flag)
+        self.pushButton_START.setEnabled(flag)
         self.SetPlateStatus(flag)
-        self.groupBox_3.setEnabled(flag)
+        self.groupBox_timelapse.setEnabled(flag)
         
         self.pushButton_HALT.setEnabled(not(flag))
         
@@ -936,8 +942,8 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
             form.countStatus.setText(" ")
             form.repeats=1
             self.running=False
-            self.progressParadigm.setValue(0)
-            self.progressPlate.setValue(0)
+            self.progressCurrent.setValue(0)
+            self.progressOverall.setValue(0)
             self.xls.save(self.filename_glob + ".xlsx")
             
             QMessageBox.information(self, "Incu-Stream","Finished...")
@@ -980,8 +986,8 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
             QMessageBox.information(self, "Incu-Stream","Cancelled...")
             form.repeats=1
             self.running=False
-            self.progressParadigm.setValue(0)
-            self.progressPlate.setValue(0)
+            self.progressCurrent.setValue(0)
+            self.progressOverall.setValue(0)
             self.xls.save(self.filename_glob + ".xlsx")
      
         else:
@@ -994,9 +1000,9 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
         self.statusbar.setVisible(True)
         self.statusbar.showMessage(text)
         
-    def updateProgress(self,plate,overall):
-        self.progressPlate.setValue(plate)
-        self.progressParadigm.setValue(overall)
+    def updateProgress(self,current,overall):
+        self.progressOverall.setValue(overall)
+        self.progressCurrent.setValue(current)
     
     def start_paradigm(self):
         pass
@@ -1169,7 +1175,7 @@ class MainDialog(QMainWindow,Gui_CellCount_18_MainWindow.Ui_MainWindow):
         self.sliderFocuserFine.setValue(8)
     
     def LensSavePosition(self):
-        coor = self.Wellname2Coordinate(self.comboLive.currentText())
+        coor = self.Wellname2Coordinate(self.combo_targetwell.currentText())
         print coor
         self.list_wellinfo[coor].FocusCoarse = self.sliderFocuserCoarse.value()
         self.list_wellinfo[coor].FocusFine = self.sliderFocuserFine.value()
@@ -1231,7 +1237,7 @@ class updatebackgroundTASK(QThread):
         self.wait()
     def run(self):
         try:
-            form.port = form.comboBox_3.currentText()
+            form.port = form.comboBox_ports.currentText()
             ser=serial.Serial(str(form.port))
             time.sleep(.1)
             
@@ -1338,7 +1344,7 @@ class serialTask(QThread):
                     form.countStatus.setText("In final cycle.")
                     
 
-                form.port = form.comboBox_3.currentText()
+                form.port = form.comboBox_ports.currentText()
                 ser=serial.Serial(str(form.port))
                 time.sleep(.1)
                 
@@ -1591,7 +1597,7 @@ class LiveMovement(QThread):
         super(LiveMovement, self).__init__(parent)
         
         self.message=str(message)
-        form.port = form.comboBox_3.currentText()
+        form.port = form.comboBox_ports.currentText()
         self.serial_obj = serial.Serial(str(form.port))
         time.sleep(.1)
         
@@ -1722,7 +1728,7 @@ def cartesianGrid(pic,W,H,Ox,Oy,C,R):
     
 
 def sendStatus(msg):
-    if form.groupBox_9.isChecked():
+    if form.groupBox_Mail.isChecked():
         fromaddr = form.lineSender.text().toLocal8Bit().data()
         toaddrs  = {form.lineRecep1.text().toLocal8Bit().data(),form.lineRecep2.text().toLocal8Bit().data(),form.lineRecep3.text().toLocal8Bit().data()}
         msg = 'Subject: %s\n\n%s' % ('Incu-Stream Status', msg)
