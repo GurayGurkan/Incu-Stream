@@ -30,7 +30,7 @@ from datetime import datetime as dt
 import datetime
 import openpyxl
 import openpyxl.drawing.image as Imagexl
-import matplotlib
+
 import matplotlib.mlab as mlab
 import smtplib
 
@@ -45,7 +45,8 @@ class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
     
     
     FOVx = 0.578 # mm
-    FOVy = 0.362
+    FOVy = 0.34
+
     IM_BACKGND =[]
     subgrid_params =''
     decimation_table = [1, .75, .5, .25, .1]
@@ -1093,8 +1094,9 @@ class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
         painter.drawEllipse(45,45,250,250)
         painter.drawLine(35,45,35,45+250)
         painter.drawLine(45,35,45+250,35)
-        painter.drawText(140,20,"D: " + str(R) + " mm")
-        painter.drawText(5,125,"Rows")
+        painter.drawText(5,20,"Radius: " + str(R) + " mm")
+        painter.drawText(5,175,"Rows")
+        painter.drawText(150,20,"Columns")
         x,y = center2ud(170,170,FOVx_sc,FOVy_sc)
         painter.drawRect(x,y,FOVx_sc,FOVy_sc)
         painter.end()
@@ -1357,26 +1359,24 @@ class serialTask(QThread):
                         time.sleep(.1)
                         ser.read(4) #Read ACK and free buffer
                         reading = True;
+                        
                         ser.write("P" + str(form.plate_current)) #transmit type initiator
                         time.sleep(.1)
                         while reading:
                             inByte=ser.read();
                             if inByte=="O":
                                 reading = False
-                                
                         message="Plate type selected..."
                         form.addlog(message)
                         self.status_updater.emit(message)
+                        time.sleep(.1)  
                         
-                        time.sleep(.1)      
                         cap = cv2.VideoCapture(form.vid_index)
                         cap.set(3,1920)
                         cap.set(4,1080)
                         cap.set(6,cv.CV_FOURCC('M', 'J', 'P', 'G') & 0xFF )
                         cap.set(13,0)
                         cap.set(17,5000)
-                        
-                        
                         
                         message="Starting capture..."
                         form.addlog(message)
@@ -1467,7 +1467,9 @@ class serialTask(QThread):
                                 print message
                                 self.status_updater.emit(message)
                                 form.addlog(message)
-                                mainframe = np.zeros((IMROWS,0,3),dtype='uint8');
+                                #mainframe = np.zeros((IMROWS,0,3),dtype='uint8');
+                                mainframe = np.zeros((IMROWS,IMCOLS*Nc,3),dtype='uint8');
+                                
         
                                 for grid_cols in range(Nc):
                                     for grid_rows in range(Nr):
@@ -1499,16 +1501,12 @@ class serialTask(QThread):
                                                 
                                             #subframe = cv2.resize(subframe.astype('float32'),None,None,fs,fs)
                                             subframe = cv2.resize(subframe,None,None,fs,fs)
+                                            subframe = makehomogen(subframe,offset=125)
 
-                                            
-                                            Vframe = np.vstack((subframe,Vframe)) # (Scan Type 3)
-                                            
-#Scan type 1
-#                                            if (grid_cols % 2):
-#                                                Vframe = np.vstack((subframe,Vframe))
-#                                                
-#                                            else:                                  
-#                                                Vframe = np.vstack((Vframe,subframe))
+                                            print "Vertical Stacking..."
+                                            Vframe = np.vstack((subframe,Vframe)) # (Scan Type 2)
+                                            print "OK..."
+
                  
                                             ser.write('O')
                                             message = name + " subgrid, Row: " + str(grid_rows+1)+ ", Column: " + str(grid_cols+1)
@@ -1519,42 +1517,51 @@ class serialTask(QThread):
                                             grid_counter +=1
                                             self.overall=(local_counter-1) + grid_counter + (form.repeats-1)*(form.well_count * int(form.subgrid_params.Ncols) * int(form.subgrid_params.Ncols))
                                             self.progressbar_updater.emit((local_counter-1) + grid_counter,self.overall)
-                                 
-                                    mainframe = np.hstack((Vframe,mainframe))
+                                    print "Horizontal Stacking..."
+                                    #mainframe = np.hstack((Vframe,mainframe))
+
+                                    if grid_cols==0:
+                                        mainframe[:,-IMCOLS:]=Vframe
+                                    else:
+                                        mainframe[:,-1*(grid_cols+1)*IMCOLS:-grid_cols*IMCOLS]=Vframe
+                                        
                                     del Vframe
-                                    print "Column end"
-                                    
+                                    print "Done..."
+                                   
                                 not_shaked=True;
                                 while (not_shaked):
                                     inByte=ser.read()
                                     if inByte=='W':
                                         not_shaked=False
-                                gray = mainframe
+                                
+                                cv2.putText(mainframe,"Incu-Stream", (5,25), cv2.FONT_HERSHEY_PLAIN, 2*Nc*Nr*fs, 255)
+                                cv2.putText(mainframe,form.plate_type[form.plate_current][0], (5,60), cv2.FONT_HERSHEY_PLAIN, 2, 255)
+                                cv2.putText(mainframe, "Well: " + name, (5,95), cv2.FONT_HERSHEY_PLAIN, 2, 255)
+                                # ROW COL EKLE!
+                                if form.repeatFLAG:
+                                    cv2.putText(mainframe, "Cycle: " + str(form.repeats) , (5,130), cv2.FONT_HERSHEY_PLAIN, 2, 255)
+                                cv2.imwrite(name + "_" + str(form.repeats)  + ".png" ,mainframe,(cv2.cv.CV_IMWRITE_PNG_COMPRESSION,4))
+                                time.sleep(.1)
+                                del mainframe
                                 
                                 
                             else: # non-subgrid
-                                print "No subgrid Capturing"
-                                gray = init_frame
+                                cv2.putText(init_frame,"Incu-Stream", (5,25), cv2.FONT_HERSHEY_PLAIN, 2, 255)
+                                cv2.putText(init_frame,form.plate_type[form.plate_current][0], (5,60), cv2.FONT_HERSHEY_PLAIN, 2, 255)
+                                cv2.putText(init_frame, "Well: " + name, (5,95), cv2.FONT_HERSHEY_PLAIN, 2, 255)
+                                cv2.imwrite(name + "_" + str(form.repeats)  + ".png" , init_frame,(cv2.cv.CV_IMWRITE_PNG_COMPRESSION,4))
+                                time.sleep(.1)
                                 
                                 self.overall=local_counter  + (form.repeats-1)*form.well_count
-                                
-                                
-                                #self.progressbar_updater.emit(local_counter,self.overall)
+                                self.progressbar_updater.emit(local_counter,self.overall)
                             local_counter = local_counter +1
                           
                             message = name + ": Saving Image..." 
                             form.addlog(message)
                             self.status_updater.emit(message)
-                            #gray = cv2.cvtColor(mainframe, cv2.COLOR_BGR2GRAY)
                             
-                            cv2.putText(gray,"Incu-Stream", (5,25), cv2.FONT_HERSHEY_PLAIN, 2, 255)
-                            cv2.putText(gray,form.plate_type[form.plate_current][0], (5,60), cv2.FONT_HERSHEY_PLAIN, 2, 255)
-                            cv2.putText(gray, "Well: " + name, (5,95), cv2.FONT_HERSHEY_PLAIN, 2, 255)
-                            if form.repeatFLAG:
-                                cv2.putText(gray, "Cycle: " + str(form.repeats) , (5,130), cv2.FONT_HERSHEY_PLAIN, 2, 255)
-                                                        
-                            cv2.imwrite(name + "_" + str(form.repeats)  + ".png" ,gray,(cv2.cv.CV_IMWRITE_PNG_COMPRESSION,4))
-                            time.sleep(.1)
+                            
+                            
 
                         ser.write('F') # Finish
                         
@@ -1572,9 +1579,10 @@ class serialTask(QThread):
                     except Exception:
                         message="Error..."
                         
-                        sendStatus("Error occured")
+                        sendStatus("Error occured...")
                         self.status_updater.emit(self.message)
                         form.addlog(message)
+                        ser.write('F')
                         ser.close()
                         cap.release()
                         cv2.destroyAllWindows()
@@ -1742,7 +1750,7 @@ def sendStatus(msg):
         server.sendmail(fromaddr, toaddrs, msg)
         server.quit()
 
-def makehomogen(inp,aspect,offset):
+def makehomogen(inp,aspect=0,offset=0):
     inp = inp.astype('float')
     inp = inp + 255 - np.max(inp)
     if (aspect == 0):
@@ -1866,7 +1874,7 @@ def waitMessage(char,serial):
         if inByte==char:
             not_shaked=False
     
-        
+
             
         
         
