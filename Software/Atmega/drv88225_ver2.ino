@@ -7,7 +7,7 @@
 // Type 3: Single Y axis Reset, Xaxis reset and bouncing
 // StepXYZ() function changed for Long Type
 // Plate Offset, aralik are now in Long Type
-// 1/32 Stepping is used for every movement except Reset2Origin()
+// 1/32 Stepping is used for every movement
 
 //*****************************
 //      DRV8825 Enable pins
@@ -38,9 +38,9 @@ int TRAY_pin = 5;
 
 
 // ***********************************
-//  Well Plates vs. Steps required for TPP
+//  Well Plates vs. Steps required for TPP (1/32 Microstep)
 //**************************************
-unsigned long aralik[5] = {30016, 19968, 15200, 6400, 7200}; // in "1/32" Steps
+unsigned long aralik[5] = {30016, 19968, 15200, 6400, 7200};
 // In mm  {38, 25 , 19, ?, 9}; // in "1/32" Steps
 
 // OFFSETS for A-1 Well Location
@@ -48,8 +48,8 @@ unsigned long X_offset[5] = {0, 0, 55200, 0, 53664};
 unsigned long Y_offset[5] = {3200, 3200, 15200, 3200, 14304};
 
 // SUB- GRID CAMERA SHIFT steps for non-overlap
-int shiftX = 288;//288;// 11x32
-int shiftY = 544;// 18x32
+int shiftX = 288;
+int shiftY = 544;
 
 // SUB-GRID scan row and column numbers
 int rows;
@@ -59,8 +59,8 @@ int zstep = 320;
 int zstep_fine = 40;
 
 // LIVE VIEW PARAMETERS
-int xstep = 288;
-int ystep = 580;
+int xstep = 212;
+int ystep = 272;
 
 int resetsteps = 896; // in 1/32 drive mode
 
@@ -75,7 +75,7 @@ unsigned long Ycurrent = 0;
 #define SLOWMODE2 20
 
 int PFullDrive = 500 ; //Delay Microseconds 600 idi
-int PSlowDrive = SLOWMODE1; //Delay Microseconds
+int PSlowDrive = SLOWMODE2; //Delay Microseconds
 
 
 /*
@@ -84,7 +84,8 @@ int PSlowDrive = SLOWMODE1; //Delay Microseconds
  *************************************
 */
 byte lastdir[3] = {0, 0, 0}; // last directions
-unsigned long lashes[3] = {0 , 0, 620};// 1/32 drive
+unsigned long lashes[3] = {0 , 0, 704};// 1/32 drive
+int last_motor=2;
 
 boolean finished = false;
 boolean started = false;
@@ -177,13 +178,13 @@ void setup() {
   reset2origin(0);
   reset2origin(1);
   digitalWrite(LEDPWM_pin, 1);
-  delay(500);
+  delay(100);
   digitalWrite(LEDPWM_pin, 0);
-  delay(500);
+  delay(100);
   digitalWrite(LEDPWM_pin, 1);
-  delay(500);
+  delay(100);
   digitalWrite(LEDPWM_pin, 0);
-  delay(500);
+  delay(100);
   digitalWrite(LEDPWM_pin, 1);
 
 }
@@ -250,14 +251,28 @@ void loop() {
 }
 
 void stepXYZ(int motor_no, int yon, unsigned long adim, int kip)
-{
+{  unsigned long i;
   int Plength;
 
   // All OFF
-  digitalWrite(Xen, HIGH);
-  digitalWrite(Yen, HIGH);
-  digitalWrite(Zen, HIGH);
+  if (motor_no<2) // X or Y
+  {
+   if (motor_no != last_motor)
 
+  {
+    digitalWrite(Xen + last_motor, HIGH);// TURN OFF previous motor
+    digitalWrite(Xen + motor_no, LOW);
+    last_motor = motor_no;
+  } 
+  }
+  else // Z
+  {
+    digitalWrite(Xen , HIGH);
+    digitalWrite(Yen , HIGH);
+    digitalWrite(Zen , LOW);
+    last_motor=2;
+  }
+   
   digitalWrite(XYZSlowMode, kip);// kip = 0 -> Full drive, kip = 1 -> 1/32 drive
 
   digitalWrite(XYZdir, yon); // dir = 0 ?
@@ -270,11 +285,10 @@ void stepXYZ(int motor_no, int yon, unsigned long adim, int kip)
   else
     Plength = PSlowDrive;
 
-  int i;
-  //Backlash Correction is applied if opposite direction is selected
+  //Backlash Correction is applied to Z Axis if opposite direction is selected
   if (yon == intNOT( lastdir[motor_no]))
   {
-    if (kip == 1)
+    if ((kip == 1) & (motor_no==2))
 
     {
       digitalWrite(XYZdir, lastdir[motor_no]);// keep the last direction
@@ -304,7 +318,6 @@ void stepXYZ(int motor_no, int yon, unsigned long adim, int kip)
 
   lastdir[motor_no] = yon;
 
-
   for (i = 0; i < adim; i++)
   {
 
@@ -317,9 +330,13 @@ void stepXYZ(int motor_no, int yon, unsigned long adim, int kip)
     Positions[motor_no] -= adim;
   else
     Positions[motor_no] += adim;
-  digitalWrite(Xen + motor_no, HIGH);//OFF
+ if (motor_no==2)
+   digitalWrite(Xen + motor_no, HIGH);//OFF if Z.
   delay(1);
 }
+
+
+
 void beep(int pin, int duration, int number)
 {
   int c;
@@ -339,6 +356,12 @@ void reset2origin(int axis)
   int Plength = SLOWMODE2;//PFullDrive;
   digitalWrite(XYZSlowMode, 1);// kip = 0 -> Full drive, kip = 1 -> 1/32 drive
   digitalWrite(XYZdir, 1); // dir = 0 ?
+
+  //ALL OFF, Release Motor Brakes
+  digitalWrite(Xen, HIGH);
+  digitalWrite(Yen, HIGH);
+  digitalWrite(Zen, HIGH);
+  
   digitalWrite(Xen + axis, LOW);//ON
   if (axis == 0)
   {
@@ -362,22 +385,34 @@ void reset2origin(int axis)
       i++;
     }
   }
-
+ 
   digitalWrite(Xen + axis, HIGH);//OFF
-  if (axis==0)
+  PSlowDrive = 60;
+  last_motor = 2;// since x is next
+  
+  if (axis == 0)
   {
-  stepXYZ(axis, 1, 1600, 1);
-  stepXYZ(axis, 0, 1600+resetsteps, 1);
+    stepXYZ(axis, 1, 1600, 1);
+    stepXYZ(axis, 0, 1600 + resetsteps, 1);
   }
-  else if (axis==1)
-    {
-  stepXYZ(axis, 1, 64, 1);
-  stepXYZ(axis, 0, 64+resetsteps, 1);
+  else if (axis == 1)
+  {
+    stepXYZ(axis, 1, 64, 1);
+    stepXYZ(axis, 0, 64 + resetsteps, 1);
   }
-  
-  
+  PSlowDrive = SLOWMODE2;
+
   beep(BEEP_pin, 20, 5);
   lastdir[axis] = 0;
+
+//ALL ON, Align for accuracy
+  digitalWrite(Xen, LOW);
+  digitalWrite(Yen, LOW);
+  delay(10);
+  digitalWrite(Xen, HIGH);//ALL OFF
+  digitalWrite(Yen, HIGH);
+
+ 
 }
 
 
@@ -644,22 +679,22 @@ bool gotoWell() //requires global "count"
   y_move = 0;
   unsigned long FastTrack;
   FastTrack = 1500; // 6 cm
-
+  PSlowDrive = SLOWMODE2;
   if (grid_count == 0)
   {
 
-    stepXYZ(0, 0, X_offset[plate_type] / 32, 0);
-    stepXYZ(1, 0, Y_offset[plate_type] / 32, 0);
+    stepXYZ(0, 0, X_offset[plate_type] , 1);
+    stepXYZ(1, 0, Y_offset[plate_type], 1);
     Xcurrent = 67200 - X_offset[plate_type];
     Ycurrent += Y_offset[plate_type];
 
     x_move = (x_i - 1) * aralik[plate_type];
-    stepXYZ(0, 1, x_move / 32, 0);
+    stepXYZ(0, 1, x_move, 1);
     Xcurrent += x_move;
 
     y_move = (y_i - 1) * aralik[plate_type];
-    delay(100);
-    stepXYZ(1, 0, y_move / 32, 0);
+    delay(1);
+    stepXYZ(1, 0, y_move, 1);
     Ycurrent += y_move;
 
     x_p = x_i;
@@ -672,7 +707,7 @@ bool gotoWell() //requires global "count"
     if (y_i >= y_p) // move opposite to origin Y
     {
       y_move = (y_i - y_p) * aralik[plate_type];
-      stepXYZ(1, 0, y_move / 32, 0);
+      stepXYZ(1, 0, y_move, 1);
       Ycurrent += y_move;
     }
     else // move towards origin Y
@@ -685,30 +720,30 @@ bool gotoWell() //requires global "count"
       reset2origin(1);
       delay(2);
       y_move = (y_i - 1) * aralik[plate_type] + Y_offset[plate_type];
-      stepXYZ(1, 0, y_move / 32, 0);
+      stepXYZ(1, 0, y_move, 1);
       Ycurrent += y_move ;
     }
-    delay(100);
+    delay(1);
     if (x_i >= x_p)
     {
       x_move = (x_i - x_p) * aralik[plate_type];
-      stepXYZ(0, 1, x_move / 32, 0);
+      stepXYZ(0, 1, x_move, 1);
 
       Xcurrent += x_move;
     }
     else
     {
       x_move = (x_p - x_i) * aralik[plate_type];
-      stepXYZ(0, 0, x_move / 32, 0);
+      stepXYZ(0, 0, x_move, 1);
       Xcurrent -= x_move;
     }
-    delay(100);
+    delay(1);
     x_p = x_i;
     y_p = y_i;
   }
 
   at_wellcenter = true;
-
+  PSlowDrive = SLOWMODE1;
   return true;
 }
 
@@ -768,18 +803,16 @@ void scanwell(int type)
                   PRINT VALUES FOR DEBUGGING!
   */
 
-//  Serial.print("Xmin,Ymin: ");
-//  Serial.print(x_min);
-//  Serial.print(",");
-//  Serial.println(y_min);
+  //  Serial.print("Xmin,Ymin: ");
+  //  Serial.print(x_min);
+  //  Serial.print(",");
+  //  Serial.println(y_min);
   // **************************
 
   PSlowDrive = SLOWMODE2;
   stepXYZ(0, 0, x_min , 1);
   PSlowDrive = SLOWMODE1;
-  //stepXYZ(0, 0, (x_min - 1280) / 32 , 0); //Go to Minx, Fast
-  //delay(2);
-  //stepXYZ(0, 0, 1280 , 1); // Prior to target, slow down
+
 
   while (!scanOK)
   {
@@ -789,12 +822,12 @@ void scanwell(int type)
       {
         stepXYZ(0, 0, shiftX, scanMode);
       }
-      delay(100);
+      delay(200);
       Serial.print("C");
       do;
       while (!(wait_byte() == 'O'));
       count_x++;
-      delay(100);
+      delay(10);
     }
     else
     {
@@ -802,30 +835,19 @@ void scanwell(int type)
 
       if (count_y < Ny )
       {
-        // Type 3 Scan
-        delay(50);
-        reset2origin(1);
-        delay(2);
+        // Type 2 Scan
+        PSlowDrive = SLOWMODE1;
+        stepXYZ(1, 0, shiftY , 1);
+        delay(1);
         //Reset
-        reset2origin(0);
-        delay(2);
-        PSlowDrive = SLOWMODE2;
-  stepXYZ(1, 0, y_min + count_y * shiftY , 1);
-  PSlowDrive = SLOWMODE1;
-        delay(100);
         reset2origin(0);
         PSlowDrive = SLOWMODE2;
         stepXYZ(0, 0, x_min , 1);
         PSlowDrive = SLOWMODE1;
-        //
-        //stepXYZ(0, 0, (x_min - 1280) / 32 , 0); // minx
-        //delay(2);
-        //stepXYZ(0, 0, 1280 , 1); // minx
-
         count_x = 1;
 
         count_y++;
-        delay(2);
+        delay(1);
       }
       else
       {
