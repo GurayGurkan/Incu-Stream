@@ -1409,16 +1409,14 @@ class serialTask(QThread):
                         
                         for i in mess: # for each well
                             name = form.Count2Wellname(local_counter)
-                            message = "Moving to " + name
-                            form.addlog(message)
-                            self.status_updater.emit(message)
-                            
                             print i
                             ser.write(i) #send XmYn
-                            time.sleep(.2)
-                            waitMessage('O',ser)
-                       
-                            # At Target Well NOW!
+                            if not(form.subgrid_params.flag):
+                                message = "Moving to " + name
+                                form.addlog(message)
+                                self.status_updater.emit(message)
+                                waitMessage('O',ser)
+                                # At Target Well
                        
                             message = name + ": Adjusting Preset Focus..."
                             print message
@@ -1450,26 +1448,34 @@ class serialTask(QThread):
                             
                             form.Lens_Current=np.array([LensC,LensF])
                             time.sleep(.1)
-                            ret = False
-                            while not(ret):
-                                ret, init_frame = cap.read()
-                                ret, init_frame = cap.read()
-                            time.sleep(.2)    
                             
                             
-                            if form.subgrid_params.flag:
-                                subframe = np.zeros((1080*fs,1920*fs,3),dtype='uint8')
-                                
-
-                                ser.write('G')
+                             
+                            if not(form.subgrid_params.flag):
+                                ret = False
+                                while not(ret):
+                                    ret, init_frame = cap.read()
+                                    ret, init_frame = cap.read()
+                                    time.sleep(.2)   
+                                cv2.putText(init_frame,"Incu-Stream", (5,25), cv2.FONT_HERSHEY_PLAIN, 2, 255)
+                                cv2.putText(init_frame,form.plate_type[form.plate_current][0], (5,60), cv2.FONT_HERSHEY_PLAIN, 2, 255)
+                                cv2.putText(init_frame, "Well: " + name, (5,95), cv2.FONT_HERSHEY_PLAIN, 2, 255)
+                                cv2.imwrite(name + "_" + str(form.repeats)  + ".png" , init_frame,(cv2.cv.CV_IMWRITE_PNG_COMPRESSION,4))
                                 time.sleep(.1)
+                                
+                                self.overall=local_counter  + (form.repeats-1)*form.well_count
+                                self.progressbar_updater.emit(local_counter,self.overall)
+                            
+                            else: ###  SUB-GRID
                                 message = name + ": Started sub-grid capturing..."
                                 print message
                                 self.status_updater.emit(message)
                                 form.addlog(message)
-                                #mainframe = np.zeros((IMROWS,0,3),dtype='uint8');
+
+                                subframe = np.zeros((1080*fs,1920*fs,3),dtype='uint8')
+                                ser.write('G') # Go-to min_x, min_y for current well
+                                time.sleep(.1)
                                 mainframe = np.zeros((IMROWS,IMCOLS*Nc,3),dtype='uint8');
-                                
         
                                 for grid_cols in range(Nc):
                                     for grid_rows in range(Nr):
@@ -1501,7 +1507,7 @@ class serialTask(QThread):
                                                 
                                             #subframe = cv2.resize(subframe.astype('float32'),None,None,fs,fs)
                                             subframe = cv2.resize(subframe,None,None,fs,fs)
-                                            subframe = makehomogen(subframe,offset=125)
+                                            #subframe = makehomogen(subframe,offset=125)
 
                                             print "Vertical Stacking..."
                                             Vframe = np.vstack((subframe,Vframe)) # (Scan Type 2)
@@ -1545,23 +1551,12 @@ class serialTask(QThread):
                                 del mainframe
                                 
                                 
-                            else: # non-subgrid
-                                cv2.putText(init_frame,"Incu-Stream", (5,25), cv2.FONT_HERSHEY_PLAIN, 2, 255)
-                                cv2.putText(init_frame,form.plate_type[form.plate_current][0], (5,60), cv2.FONT_HERSHEY_PLAIN, 2, 255)
-                                cv2.putText(init_frame, "Well: " + name, (5,95), cv2.FONT_HERSHEY_PLAIN, 2, 255)
-                                cv2.imwrite(name + "_" + str(form.repeats)  + ".png" , init_frame,(cv2.cv.CV_IMWRITE_PNG_COMPRESSION,4))
-                                time.sleep(.1)
-                                
-                                self.overall=local_counter  + (form.repeats-1)*form.well_count
-                                self.progressbar_updater.emit(local_counter,self.overall)
+
                             local_counter = local_counter +1
                           
                             message = name + ": Saving Image..." 
                             form.addlog(message)
                             self.status_updater.emit(message)
-                            
-                            
-                            
 
                         ser.write('F') # Finish
                         
