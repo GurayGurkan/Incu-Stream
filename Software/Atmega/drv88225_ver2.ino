@@ -1,13 +1,14 @@
 // Compatible Incu=Stream Interface
 // 11.07.2018
 
-// 1408.2018: Scanning Types 1,2 and 3 introduced
-// Type 1: Snake Like Sacnning
+// 14.08.2018: Scanning Types 1,2 and 3 introduced
+// Type 1: Snake Like Scanning
 // Type 2: Single Y axis Reset, X axis bouncing
 // Type 3: Single Y axis Reset, Xaxis reset and bouncing
 // StepXYZ() function changed for Long Type
-// Plate Offset, aralik are now in Long Type
+// Plate Offset, spacing are now in Long Type
 // 1/32 Stepping is used for every movement
+// 06.09.2018: XmYn command relies on "grid_selected" flag.
 
 //*****************************
 //      DRV8825 Enable pins
@@ -29,8 +30,8 @@ int Positions[] = {0, 0, 0};
 //      More Externals
 //  X,Y Limit Switches,Buzzer, LED
 //*****************************
+int LEDPWM_pin = 3;
 int BEEP_pin = 4;
-int LEDPWM_pin = 3; //PWM 2kHz
 int SWITCH_x_pin = 6;
 int SWITCH_y_pin = 7 ;
 
@@ -40,16 +41,16 @@ int TRAY_pin = 5;
 // ***********************************
 //  Well Plates vs. Steps required for TPP (1/32 Microstep)
 //**************************************
-unsigned long aralik[5] = {30016, 19968, 15200, 6400, 7200};
+unsigned long spacing[5] = {30016, 19968, 15200, 6400, 7200};
 // In mm  {38, 25 , 19, ?, 9}; // in "1/32" Steps
 
-// OFFSETS for A-1 Well Location
-unsigned long X_offset[5] = {0, 0, 55200, 0, 53664};
-unsigned long Y_offset[5] = {3200, 3200, 15200, 3200, 14304};
+// A-1 Well Center Coordinates
+unsigned long X_offset[5] = {0, 0, 49872, 0, 53664};
+unsigned long Y_offset[5] = {3200, 3200, 14800, 3200, 14304};
 
 // SUB- GRID CAMERA SHIFT steps for non-overlap
-int shiftX = 288;
-int shiftY = 544;
+unsigned long shiftX = 288;
+unsigned long shiftY = 544;
 
 // SUB-GRID scan row and column numbers
 int rows;
@@ -178,13 +179,13 @@ void setup() {
   reset2origin(0);
   reset2origin(1);
   digitalWrite(LEDPWM_pin, 1);
-  delay(100);
+  delay(1000);
   digitalWrite(LEDPWM_pin, 0);
-  delay(100);
+  delay(1000);
   digitalWrite(LEDPWM_pin, 1);
-  delay(100);
+  delay(1000);
   digitalWrite(LEDPWM_pin, 0);
-  delay(100);
+  delay(1000);
   digitalWrite(LEDPWM_pin, 1);
 
 }
@@ -195,7 +196,7 @@ void loop() {
   if (!finished) {
 
     task = decodeMove();
-    if (task == 1) // 1: Goto "XnYm"
+    if (task == 1 && grid_selected == false) // 1: Goto "XnYm"
     {
       if (gotoWell())
       {
@@ -214,6 +215,7 @@ void loop() {
     else if (task == 6 && grid_selected == true) //capture grid
     {
       scanwell(plate_type);
+      grid_count++;
     }
     else if (task == 7)
     {
@@ -335,8 +337,6 @@ void stepXYZ(int motor_no, int yon, unsigned long adim, int kip)
   delay(1);
 }
 
-
-
 void beep(int pin, int duration, int number)
 {
   int c;
@@ -414,7 +414,6 @@ void reset2origin(int axis)
 
  
 }
-
 
 int intNOT(int inp)
 {
@@ -688,11 +687,11 @@ bool gotoWell() //requires global "count"
     Xcurrent = 67200 - X_offset[plate_type];
     Ycurrent += Y_offset[plate_type];
 
-    x_move = (x_i - 1) * aralik[plate_type];
+    x_move = (x_i - 1) * spacing[plate_type];
     stepXYZ(0, 1, x_move, 1);
     Xcurrent += x_move;
 
-    y_move = (y_i - 1) * aralik[plate_type];
+    y_move = (y_i - 1) * spacing[plate_type];
     delay(1);
     stepXYZ(1, 0, y_move, 1);
     Ycurrent += y_move;
@@ -706,7 +705,7 @@ bool gotoWell() //requires global "count"
 
     if (y_i >= y_p) // move opposite to origin Y
     {
-      y_move = (y_i - y_p) * aralik[plate_type];
+      y_move = (y_i - y_p) * spacing[plate_type];
       stepXYZ(1, 0, y_move, 1);
       Ycurrent += y_move;
     }
@@ -715,25 +714,25 @@ bool gotoWell() //requires global "count"
       /* ******* 14.08.2018 *******
         // To prevent backlash, do not go towards -y, reset and then go towards +y.
         // The below line is cancelled
-        // y_move = (y_p - y_i) * aralik[plate_type];
+        // y_move = (y_p - y_i) * spacing[plate_type];
       */
       reset2origin(1);
       delay(2);
-      y_move = (y_i - 1) * aralik[plate_type] + Y_offset[plate_type];
+      y_move = (y_i - 1) * spacing[plate_type] + Y_offset[plate_type];
       stepXYZ(1, 0, y_move, 1);
       Ycurrent += y_move ;
     }
     delay(1);
     if (x_i >= x_p)
     {
-      x_move = (x_i - x_p) * aralik[plate_type];
+      x_move = (x_i - x_p) * spacing[plate_type];
       stepXYZ(0, 1, x_move, 1);
 
       Xcurrent += x_move;
     }
     else
     {
-      x_move = (x_p - x_i) * aralik[plate_type];
+      x_move = (x_p - x_i) * spacing[plate_type];
       stepXYZ(0, 0, x_move, 1);
       Xcurrent -= x_move;
     }
@@ -765,7 +764,7 @@ void center_camera()
 void scanwell(int type)
 {
   digitalWrite(LEDPWM_pin, 1);
-  // Kamera ortada ola
+ 
   //FOVx = 156 adim
   //FOVy = 296 adim
 
@@ -791,14 +790,14 @@ void scanwell(int type)
   delay(2);
   //Go to MinY
 
-  y_min = Y_offset[type] - dy + (y_i - 1) * aralik[type];
+  y_min = Y_offset[type] - dy + (y_i - 1) * spacing[type];
   PSlowDrive = SLOWMODE2;
   stepXYZ(1, 0, y_min , 1);
   PSlowDrive = SLOWMODE1;
 
   //Go to MinX
 
-  x_min = X_offset[type] - (dx + ((x_i - 1) * aralik[type]));
+  x_min = X_offset[type] - (dx + ((x_i - 1) * spacing[type]));
   /*
                   PRINT VALUES FOR DEBUGGING!
   */
@@ -839,7 +838,7 @@ void scanwell(int type)
         PSlowDrive = SLOWMODE1;
         stepXYZ(1, 0, shiftY , 1);
         delay(1);
-        //Reset
+        //Reset X
         reset2origin(0);
         PSlowDrive = SLOWMODE2;
         stepXYZ(0, 0, x_min , 1);
