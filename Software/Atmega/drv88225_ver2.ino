@@ -1,76 +1,86 @@
-// Compatible Incu=Stream Interface
-// 11.07.2018
+/*
+Compatible with IncuStream Interface
+This version has common DIR,STEP amd MODE pins for X,Y and Z (Lens) axis motors.
+
+Developed by: Guray Gurkan, PhD
+e-mail: guray_gurkan@yahoo.co.uk
+*/
 
 // 14.08.2018: Scanning Types 1,2 and 3 introduced
-// Type 1: Snake Like Scanning
-// Type 2: Single Y axis Reset, X axis bouncing
-// Type 3: Single Y axis Reset, Xaxis reset and bouncing
-// StepXYZ() function changed for Long Type
-// Plate Offset, spacing are now in Long Type
-// 1/32 Stepping is used for every movement
-// 06.09.2018: XmYn command relies on "grid_selected" flag.
+//  Type 1: Snake Like Scanning
+//  Type 2: Single Y axis Reset, X axis bouncing
+//  Type 3: Single Y axis Reset, Xaxis reset and bouncing
 
-//*****************************
-//      DRV8825 Enable pins
-//*****************************
+// StepXYZ() function changed for Long type
+// Plate Offset, spacing are now in Long type
+// 1/32 Microstepping is used for every movement
+// XmYn command relies on "grid_selected" flag
+
+/******************************
+      DRV8825 Enable pins
+******************************/
+ 
 int Xen = 8;
 int Yen = 9;
 int Zen = 10;
 
-//*****************************
-//      (Common) DRV8825
-//  Direction, Step and Mode pins
-//*****************************
+/*****************************
+      (Common) DRV8825
+  Direction, Step and Mode pins
+*****************************/
 int XYZdir = 11; // 1->Reset Yonu, 0-> Uzaklasma
 int XYZstep = 12;
 int XYZSlowMode = 13;
 int Positions[] = {0, 0, 0};
 
-//*****************************
-//      More Externals
-//  X,Y Limit Switches,Buzzer, LED
-//*****************************
+/*****************************
+      More Externals
+  X,Y Limit Switches,Buzzer, LED
+*****************************/
 int LEDPWM_pin = 3;
 int BEEP_pin = 4;
 int SWITCH_x_pin = 6;
 int SWITCH_y_pin = 7 ;
+int TRAY_pin = 5; // not used for current HW
 
-int TRAY_pin = 5;
 
-
-// ***********************************
-//  Well Plates vs. Steps required for TPP (1/32 Microstep)
-//**************************************
+/***********************************
+  Well Plates vs. Steps required for TPP (1/32 Microstep)
+***********************************/
 unsigned long spacing[5] = {30016, 19968, 15200, 6400, 7200};
-// In mm  {38, 25 , 19, ?, 9}; // in "1/32" Steps
+// In mm  {38, 25 , 19, ?, 9}; 
 
 // A-1 Well Center Coordinates
 unsigned long X_offset[5] = {0, 0, 49872, 0, 53664};
 unsigned long Y_offset[5] = {3200, 3200, 14800, 3200, 14304};
 
-// SUB- GRID CAMERA SHIFT steps for non-overlap
+
+/********************************
+SUB- GRID CAMERA SHIFT steps for non-overlap
+    DO NOT MODIFY!
+*********************************/
 unsigned long shiftX = 288;
 unsigned long shiftY = 544;
 
+ 
 // SUB-GRID scan row and column numbers
 int rows;
 int cols;
 
+// LIVE VIEW PARAMETERS
 int zstep = 320;
 int zstep_fine = 40;
-
-// LIVE VIEW PARAMETERS
 int xstep = 212;
 int ystep = 272;
 
-int resetsteps = 896; // in 1/32 drive mode
+int resetsteps = 896; // in microstepping (1/32) drive mode
 
 int deltaX;
 int deltaY;
 
-unsigned long Zcurrent = 0;
 unsigned long  Xcurrent = 0;
 unsigned long Ycurrent = 0;
+unsigned long Zcurrent = 0;
 
 #define SLOWMODE1 400
 #define SLOWMODE2 20
@@ -86,7 +96,7 @@ int PSlowDrive = SLOWMODE2; //Delay Microseconds
 */
 byte lastdir[3] = {0, 0, 0}; // last directions
 unsigned long lashes[3] = {0 , 0, 704};// 1/32 drive
-int last_motor=2;
+int last_motor = 2;
 
 boolean finished = false;
 boolean started = false;
@@ -141,9 +151,6 @@ void setup() {
   y_p = 0;
   grid_count = 0;
 
-
-
-
   // **************************************************************
   //                    END OF SCAN PARAMETERS
   // **************************************************************
@@ -153,7 +160,10 @@ void setup() {
   //                   LISTEN PORT and DETERMINE Plate-Type
   //            SETUP respect to input: "P" + id
   //  id=0, 6 Well
-  //  id=1, 12 Well...
+  //  id=1, 12 Well
+  //  id=2, 24 Well
+  //  id=3, 48 Well
+  //  id=4, 96 Well
   // **************************************************************
 
   String sub = "";
@@ -165,7 +175,6 @@ void setup() {
       val = wait_byte();
       if (isDigit(val))
       {
-
         sub += (char)val;
         plate_type = sub.toInt();
         sub = "";
@@ -233,10 +242,7 @@ void loop() {
 
       finished = true;
       digitalWrite(LEDPWM_pin, 0);
-
-
-      delay(100);
-
+     delay(100);
       beep(BEEP_pin, 100, 2);
       reset2origin(0);
       reset2origin(1);
