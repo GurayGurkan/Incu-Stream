@@ -1490,7 +1490,7 @@ class serialTask(QThread):
                                                 subframe.fill(0)
                                                 Vframe = np.zeros((0,IMCOLS,3),dtype='uint8')
 
-                                            time.sleep(.2) #mechanical settle duration                                     #24.05.2016
+                                            time.sleep(.1) #mechanical settle duration                                     #24.05.2016
 
 #                                            N_AVERAGE=2
 #                                            for AVER in range(N_AVERAGE): #average image for CMOS sensor denoising
@@ -1510,8 +1510,10 @@ class serialTask(QThread):
                                             #subframe = makehomogen(subframe,offset=125)
 
                                             print "Vertical Stacking..."
-                                            Vframe = np.vstack((subframe,Vframe)) # (Scan Type 2)
-                                            print "OK..."
+                                            if (grid_cols % 2)==0: #going up
+                                                Vframe = np.vstack((subframe,Vframe)) # (Up stack)
+                                            else:
+                                                Vframe = np.vstack((Vframe,subframe)) # (Down stack)
 
                  
                                             ser.write('O')
@@ -1546,7 +1548,7 @@ class serialTask(QThread):
                                 # ROW COL EKLE!
                                 if form.repeatFLAG:
                                     cv2.putText(mainframe, "Cycle: " + str(form.repeats) , (5,130), cv2.FONT_HERSHEY_PLAIN, 2, 255)
-                                cv2.imwrite(name + "_" + str(form.repeats)  + ".png" ,mainframe,(cv2.cv.CV_IMWRITE_PNG_COMPRESSION,4))
+                                cv2.imwrite(name + "_" + str(form.repeats)  + ".jpg" ,mainframe,(cv2.cv.CV_IMWRITE_JPEG_QUALITY,100))
                                 time.sleep(.1)
                                 del mainframe
                                 
