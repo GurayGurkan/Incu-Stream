@@ -83,13 +83,13 @@ unsigned long Zcurrent = 0;
 
 #define PULSE_YSTEP 800
 #define PULSE_SLOW 200
-#define PULSE_GRID 800 //100
-#define PULSE_FAST 20
+#define PULSE_GRID 1000 //100
+#define PULSE_FAST 10
 #define SLOWMODELENS 80
 
 
 
-int PulseReset = 20;
+int PulseReset = 10;
 
 /*
  *************************************
@@ -97,7 +97,7 @@ int PulseReset = 20;
  *************************************
 */
 byte lastdir[3] = {0, 0, 0}; // last directions
-unsigned long lashes[3] = {32 , 0, 704};// 1/32 drive
+unsigned long lashes[3] = {0 , 0, 704};// 1/32 drive
 int last_motor = 2;
 
 boolean finished = false;
@@ -795,28 +795,32 @@ void scanwell(int type)
   y_min = Y_offset[type] + (y_i - 1) * spacing[type];
   y_min = y_min - dy;
 
-  stepXYZ(1, 0, y_min , PULSE_FAST);
-  delay(10);
+  stepXYZ(1, 0, y_min-shiftY , PULSE_FAST);
+    delay(10);
+    
   //Go to MinX
   x_min = X_offset[type] - (dx + ((x_i - 1) * spacing[type]));
-  stepXYZ(0, 0, x_min , PULSE_FAST);
+  stepXYZ(0, 0, x_min-shiftX , PULSE_FAST);
 
   // Reset Stepper Indices and Release Motors
-  digitalWrite(EN[0], HIGH);
-  delay(100);
-  digitalWrite(EN[1], HIGH);
-  delay(100);
-  // Motors "ON" again!
-  digitalWrite(EN[0], LOW);
-  delay(100);
-  digitalWrite(EN[1], LOW);
-  delay(100);
-
-
+//  digitalWrite(EN[0], HIGH);
+//  delay(100);
+//  digitalWrite(EN[1], HIGH);
+//  delay(100);
+//  
+//  // Motors "ON" again!
+//  digitalWrite(EN[0], LOW);
+//  delay(100);
+//  digitalWrite(EN[1], LOW);
+//  delay(1000);
+  
+stepXYZ(1, 0, shiftY , PULSE_GRID);
+delay(1000);
+stepXYZ(0, 0, shiftX , PULSE_GRID);
   while (!scanOK)
   {
     digitalWrite(LEDPWM_pin, 1);
-    delay(100);
+    delay(10);
     if (count_x < Nx + 1)
     {
 
@@ -828,13 +832,13 @@ void scanwell(int type)
         }
         stepXYZ(0, xdir, shiftX, PULSE_GRID);
       }
-      delay(100);
+      delay(500);
       Serial.print("C");
-      delay(1);
+      delay(500);
       do;
       while (!(wait_byte() == 'O'));
       count_x++;
-      delay(100);
+      delay(10);
     }
     else
     {
@@ -844,7 +848,7 @@ void scanwell(int type)
       {
         // Type 1 Scan
         stepXYZ(1, 0, shiftY , PULSE_YSTEP);
-        delay(1);
+        delay(100);
         //Go to minx
         //reset2origin(0);//?
         //delay(10);
