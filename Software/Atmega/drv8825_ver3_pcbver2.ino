@@ -81,11 +81,11 @@ unsigned long Ycurrent = 0;
 unsigned long Zcurrent = 0;
 
 
-#define PULSE_YSTEP 800
-#define PULSE_SLOW 200
-#define PULSE_GRID 1000 //100
+#define PULSE_YSTEP 15
+#define PULSE_SLOW 80
+#define PULSE_GRID 15 //100
 #define PULSE_FAST 10
-#define SLOWMODELENS 80
+#define SLOWMODELENS 10
 
 
 
@@ -795,28 +795,19 @@ void scanwell(int type)
   y_min = Y_offset[type] + (y_i - 1) * spacing[type];
   y_min = y_min - dy;
 
-  stepXYZ(1, 0, y_min-shiftY , PULSE_FAST);
-    delay(10);
+  stepXYZ(1, 0, y_min-500 , PULSE_FAST);
+  delay(10);
+  stepXYZ(1, 0, 500 , PULSE_GRID);
     
   //Go to MinX
   x_min = X_offset[type] - (dx + ((x_i - 1) * spacing[type]));
-  stepXYZ(0, 0, x_min-shiftX , PULSE_FAST);
+  stepXYZ(0, 0, x_min-500 , PULSE_FAST);
+  stepXYZ(0, 0, 500 , PULSE_GRID);
 
-  // Reset Stepper Indices and Release Motors
-//  digitalWrite(EN[0], HIGH);
-//  delay(100);
-//  digitalWrite(EN[1], HIGH);
-//  delay(100);
-//  
-//  // Motors "ON" again!
-//  digitalWrite(EN[0], LOW);
-//  delay(100);
-//  digitalWrite(EN[1], LOW);
-//  delay(1000);
-  
-stepXYZ(1, 0, shiftY , PULSE_GRID);
-delay(1000);
-stepXYZ(0, 0, shiftX , PULSE_GRID);
+  // Reset Stepper Indices
+ 
+delay(100);
+
   while (!scanOK)
   {
     digitalWrite(LEDPWM_pin, 1);
@@ -832,13 +823,13 @@ stepXYZ(0, 0, shiftX , PULSE_GRID);
         }
         stepXYZ(0, xdir, shiftX, PULSE_GRID);
       }
-      delay(500);
+      delay(100);
       Serial.print("C");
-      delay(500);
+      delay(10);
       do;
       while (!(wait_byte() == 'O'));
       count_x++;
-      delay(10);
+      delay(50);
     }
     else
     {
@@ -847,8 +838,10 @@ stepXYZ(0, 0, shiftX , PULSE_GRID);
       if (count_y < Ny )
       {
         // Type 1 Scan
+        //digitalWrite(EN[1], LOW);
         stepXYZ(1, 0, shiftY , PULSE_YSTEP);
-        delay(100);
+        delay(10);
+        //digitalWrite(EN[1], HIGH);
         //Go to minx
         //reset2origin(0);//?
         //delay(10);
