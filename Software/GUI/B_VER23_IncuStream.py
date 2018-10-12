@@ -73,7 +73,7 @@ class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
     y_max=0
     
     
-    vid_index =0; #Camera Index
+    vid_index =1; #Camera Index
     ser=[]
     filename_glob=''
     folder =''
@@ -98,6 +98,7 @@ class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
     Lens_Origin = np.array([10,8])
     Lens_Current =np.array([LensCoarse_Origin,LensFine_Origin])
     
+    
     # ----------- 09.08.2018 ----- End
     
     
@@ -110,7 +111,7 @@ class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
 #    XLSsetup.merge_cells('A1:F6')
 #    XLSsetup.merge_cells('A1:F6')
 #    XLSsetup.merge_cells('A7:F7')
-#    XLSsetup['A7']="Produced by IncuScope" 
+#    XLSsetup['A7']="Produced by Incustream" 
 #    
 #    XLSstatus = xls.create_sheet(title="Events")
 #    XLSstatus.append(("Date/time","Event"))
@@ -146,6 +147,8 @@ class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
             
             self.Well_OFF=QPixmap("./images/Unfilled.bmp")
             self.Well_ON=QPixmap("./images/Filled.bmp")
+            
+            self.IM_BACKGND = cv2.imread('./images/Background.jpg')
             
       
             ####                        COM DETECT START                      ####
@@ -193,7 +196,7 @@ class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
             
             if self.folder=='':
                     try:
-                        self.folder='IncuScope'
+                        self.folder='Incustream'
                         glob.os.chdir('C:\\')
                         glob.os.mkdir(self.folder)
                         glob.os.chdir('C:\\' + self.folder)
@@ -201,12 +204,13 @@ class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
                     except WindowsError:
                         pass
                         
-            glob.os.chdir('C:\IncuScope')
+            
+            
+            glob.os.chdir('C:\Incustream')
             self.folder=glob.os.getcwd()
-            self.IM_BACKGND=cv2.imread('Corrector.jpeg')
-            #pixmap = QPixmap.fromImage(self.ToQImage(self.IM_BACKGND), Qt.AutoColor)
-            #pixmap = pixmap.scaled(192,108,Qt.KeepAspectRatio)
-            #self.labelBCKGND.setPixmap(pixmap)
+#            pixmap = QPixmap.fromImage(self.ToQImage(self.IM_BACKGND), Qt.AutoColor)
+#            pixmap = pixmap.scaled(192,108,Qt.KeepAspectRatio)
+#            self.labelBCKGND.setPixmap(pixmap)
             self.pushButtonBCKGND.clicked.connect(self.updateBCKGND)
             self.pushButtonBCKGND2.clicked.connect(self.updateBCKGND2)
             
@@ -303,7 +307,7 @@ class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
             self.folderView.hideColumn(1)
             self.folderView.hideColumn(2)
             self.folderView.hideColumn(3)
-            self.folderView.setRootIndex(self.folderModel.index('C:\IncuScope'))
+            self.folderView.setRootIndex(self.folderModel.index('C:\Incustream'))
             self.folderSelModel= self.folderView.selectionModel()
             self.folderSelModel.selectionChanged.connect(self.updateCaptureList)
             self.folderViewCWD=self.folder # initial folder
@@ -401,9 +405,9 @@ class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
   
     def updateBCKGND(self): # via CAMERA
         if (self.plate_current==[]):
-            QMessageBox.warning(self,"IncuScope","Please select PLATE TYPE first!")
+            QMessageBox.warning(self,"Incustream","Please select PLATE TYPE first!")
         else:
-            glob.os.chdir('C:\Incuscope')
+            glob.os.chdir('C:\Incustream')
             self.folder=glob.os.getcwd()
             self.pushButtonBCKGND.setEnabled(False)
             self.pushButtonBCKGND2.setEnabled(False)
@@ -418,8 +422,8 @@ class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
         self.pushButtonBCKGND.setEnabled(False)
         self.pushButtonBCKGND2.setEnabled(False)
         try:
-            back_file = QFileDialog.getOpenFileName(form,"Select Background Image...","C:\IncuScope","Background files (BG*.png)")
-            glob.os.chdir('C:\Incuscope')
+            back_file = QFileDialog.getOpenFileName(form,"Select Background Image...","C:\Incustream","Background files (BG*.png)")
+            glob.os.chdir('C:\Incustream')
             self.folder=glob.os.getcwd()
             self.IM_BACKGND=cv2.imread(back_file)
             pixmap = QPixmap.fromImage(self.ToQImage(self.IM_BACKGND), Qt.AutoColor)
@@ -436,8 +440,8 @@ class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
         
         for c in range(63):
             try:
-                sub=serial.Serial(serial.device(c),timeout=3)
-                sub.setTimeout(3)
+                sub=serial.Serial(serial.device(c),timeout=3, baudrate = 57600)
+                time.sleep(.3)
                 d=sub.read(4)
                 
                 if d=='INCU':
@@ -661,7 +665,7 @@ class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
                 self.XLSWriteSetup()
                 self.EnableControls(False)
                 self.running=True
-                glob.os.chdir('C:\Incuscope')
+                glob.os.chdir('C:\Incustream')
                 self.folder=glob.os.getcwd()
 
                 pctime=time.localtime()
@@ -1240,7 +1244,8 @@ class updatebackgroundTASK(QThread):
     def run(self):
         try:
             form.port = form.comboBox_ports.currentText()
-            ser=serial.Serial(str(form.port))
+            ser=serial.Serial(str(form.port),baudrate=57600)
+            
             time.sleep(.1)
             
             if ser.isOpen():
@@ -1347,7 +1352,8 @@ class serialTask(QThread):
                     
 
                 form.port = form.comboBox_ports.currentText()
-                ser=serial.Serial(str(form.port))
+                ser=serial.Serial(str(form.port),baudrate=57600)
+                
                 time.sleep(.1)
                 
                 if ser.isOpen():
@@ -1457,6 +1463,7 @@ class serialTask(QThread):
                                     ret, init_frame = cap.read()
                                     ret, init_frame = cap.read()
                                     time.sleep(.2)   
+                                init_frame = init_frame-form.IM_BACKGND
                                 cv2.putText(init_frame,"Incu-Stream", (5,25), cv2.FONT_HERSHEY_PLAIN, 2, 255)
                                 cv2.putText(init_frame,form.plate_type[form.plate_current][0], (5,60), cv2.FONT_HERSHEY_PLAIN, 2, 255)
                                 cv2.putText(init_frame, "Well: " + name, (5,95), cv2.FONT_HERSHEY_PLAIN, 2, 255)
@@ -1473,6 +1480,7 @@ class serialTask(QThread):
                                 form.addlog(message)
 
                                 subframe = np.zeros((1080*fs,1920*fs,3),dtype='uint8')
+                            
                                 ser.write('G') # Go-to min_x, min_y for current well
                                 time.sleep(.1)
                                 mainframe = np.zeros((IMROWS,IMCOLS*Nc,3),dtype='uint8');
@@ -1506,6 +1514,10 @@ class serialTask(QThread):
                                                 ret, subframe = cap.read()
                                                 
                                             #subframe = cv2.resize(subframe.astype('float32'),None,None,fs,fs)
+                                            print "in"
+                                            #subframe = cv2.cvtColor(subframe,cv2.COLOR_BGR2RGB) - (form.IM_BACKGND)
+                                            subframe = cv2.subtract(subframe ,cv2.cvtColor(form.IM_BACKGND,cv2.COLOR_BGR2RGB))
+                                            print "out"
                                             subframe = cv2.resize(subframe,None,None,fs,fs)
                                             #subframe = makehomogen(subframe,offset=125)
 
@@ -1574,10 +1586,11 @@ class serialTask(QThread):
                       
                         
                     except Exception:
+                        
                         message="Error..."
                         
                         sendStatus("Error occured...")
-                        self.status_updater.emit(self.message)
+                        self.status_updater.emit(message)
                         form.addlog(message)
                         ser.write('F')
                         ser.close()
@@ -1603,7 +1616,8 @@ class LiveMovement(QThread):
         
         self.message=str(message)
         form.port = form.comboBox_ports.currentText()
-        self.serial_obj = serial.Serial(str(form.port))
+        self.serial_obj = serial.Serial(str(form.port),baudrate=57600)
+        
         time.sleep(.1)
         
         self.serial_obj.read(4)
