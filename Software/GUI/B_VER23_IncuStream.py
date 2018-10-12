@@ -344,7 +344,7 @@ class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
         print path, png_name
 
         if not (png_name==None):
-            png_fullname = path + '/' + png_name + '_1.png'
+            png_fullname = path + '/' + png_name + '_1.jpg'
             pix = QPixmap(str(png_fullname))
             pix = pix.scaled(self.pngViewer.width(),self.pngViewer.height(),Qt.KeepAspectRatio)
             self.pngViewer.setPixmap(pix)
@@ -366,7 +366,7 @@ class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
     def updatePNGcycle(self):  #06.06.2016
         val = self.pngCycle.value()
         self.label_pngCycle.setText(str(val))
-        pix = QPixmap(self.currentPNGprefix + str(val) + '.png')
+        pix = QPixmap(self.currentPNGprefix + str(val) + '.jpg')
         pix = pix.scaled(self.pngViewer.width(),self.pngViewer.height(),Qt.KeepAspectRatio)
         self.pngViewer.setPixmap(pix)
         
@@ -422,7 +422,7 @@ class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
         self.pushButtonBCKGND.setEnabled(False)
         self.pushButtonBCKGND2.setEnabled(False)
         try:
-            back_file = QFileDialog.getOpenFileName(form,"Select Background Image...","C:\Incustream","Background files (BG*.png)")
+            back_file = QFileDialog.getOpenFileName(form,"Select Background Image...","C:\Incustream","Background files (BG*.jpg)")
             glob.os.chdir('C:\Incustream')
             self.folder=glob.os.getcwd()
             self.IM_BACKGND=cv2.imread(back_file)
@@ -1306,7 +1306,7 @@ class updatebackgroundTASK(QThread):
                 pixmap = pixmap.scaled(192,108,Qt.KeepAspectRatio)
                 
                 
-                cv2.imwrite('BG_' + dt.now().strftime("%d%m%Y_%H%M") + ".png",form.IM_BACKGND,(cv2.cv.CV_IMWRITE_PNG_COMPRESSION,4))
+                cv2.imwrite('BG_' + dt.now().strftime("%d%m%Y_%H%M") + ".jpg",form.IM_BACKGND,(cv2.cv.CV_IMWRITE_JPEG_QUALITY,100))
                 message="Background update finished..."
                 
                 self.status_updater.emit(message)
@@ -1467,7 +1467,7 @@ class serialTask(QThread):
                                 cv2.putText(init_frame,"Incu-Stream", (5,25), cv2.FONT_HERSHEY_PLAIN, 2, 255)
                                 cv2.putText(init_frame,form.plate_type[form.plate_current][0], (5,60), cv2.FONT_HERSHEY_PLAIN, 2, 255)
                                 cv2.putText(init_frame, "Well: " + name, (5,95), cv2.FONT_HERSHEY_PLAIN, 2, 255)
-                                cv2.imwrite(name + "_" + str(form.repeats)  + ".png" , init_frame,(cv2.cv.CV_IMWRITE_PNG_COMPRESSION,4))
+                                cv2.imwrite(name + "_" + str(form.repeats)  + ".jpg" , init_frame,(cv2.cv.CV_IMWRITE_JPEG_QUALITY,100))
                                 time.sleep(.1)
                                 
                                 self.overall=local_counter  + (form.repeats-1)*form.well_count
@@ -1816,12 +1816,12 @@ def uniqueList(inp):
     
 def returnFileList(path):
     glob.os.chdir(str(path))
-    pnglist = glob.glob('*.png')
+    pnglist = glob.glob('*.jpg')
     lastlist = uniqueList(pnglist)
     return lastlist
     
 def repeatedName(fname):
-    flist = glob.glob(str(fname) + '*.png')
+    flist = glob.glob(str(fname) + '*.jpg')
     
     
     if len(flist)>1:
