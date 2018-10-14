@@ -5,6 +5,7 @@
 
   Developed by: Guray Gurkan, PhD
   e-mail: guray_gurkan@yahoo.co.uk
+        : g.gurkan@iku.edu.tr
 */
 
 // 14.08.2018: Scanning Types 1,2 and 3 introduced
