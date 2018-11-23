@@ -1,5 +1,7 @@
 # Incu-stream 1.0 (initial version)
-This repository involves 
+**The open-hardware microplate system for incubators**
+
+This repository involves:
   - **CAD files**: AutoCAD drawings for housing of Incu-stream mechanical parts
   - **Schematics and pcb**: Circuit schematics and PCB layout files of Incu-stream control electronics.
   - **Software**: Involves C codes (for Atmega328) and Python codes (for Incu-stream user interface)
