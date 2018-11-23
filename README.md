@@ -1,5 +1,5 @@
 # Incu-stream 1.0 (initial version)
-**The open-hardware microplate system for incubators**
+**The open-hardware microplate reader system for incubators**
 
 This repository involves:
   - **CAD files**: AutoCAD drawings for housing of Incu-stream mechanical parts
