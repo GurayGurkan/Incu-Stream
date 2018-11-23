@@ -5,13 +5,15 @@
 @ B_VER 23.0
 #
 """
-# autofocusing added
+
 # plate type vs. cell subgrid animation added
 # e-mail option added, now optional 
 # background capture added
 # lens (fine focus) control added
 #  XLSWrite OK
 # background enhancement added
+# well specific focus 
+
 
 
 import guidata
@@ -41,11 +43,12 @@ class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
     well = {}
     well_mask = []
     #plate_type = {0:'6 Well Plate',1:'12 Well Plate',2:'24 Well Plate',3:'48 Well Plate', 4:'96 Well Plate'}
-    plate_type = [['6 Well Plate',35],['12 Well Plate',22.5],['24 Well Plate',16],['48 Well Plate', 9],['96 Well Plate',6]]
+    plate_type = [['6 Well Plate',35],['12 Well Plate',22.5],['24 Well Plate',16],['48 Well Plate', 9],['96 Well Plate',6.5]]
     
+    pix100um = 280 # Measurement via 100 um grid Calibration Slide
     
-    FOVx = 0.578 # mm
-    FOVy = 0.34
+    FOVx = 192./pix100um # mm
+    FOVy = 108./pix100um
 
     IM_BACKGND =[]
     subgrid_params =''
@@ -73,7 +76,7 @@ class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
     y_max=0
     
     
-    vid_index =1; #Camera Index
+    vid_index = 0; #Camera Index
     ser=[]
     filename_glob=''
     folder =''
@@ -93,9 +96,9 @@ class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
     lens_level = 0
     
     # ----------- 09.08.2018 ----- Begin
-    LensCoarse_Origin = 10
-    LensFine_Origin = 8
-    Lens_Origin = np.array([10,8])
+    LensCoarse_Origin = 0
+    LensFine_Origin = 0
+    Lens_Origin = np.array([0,0])
     Lens_Current =np.array([LensCoarse_Origin,LensFine_Origin])
     
     
@@ -791,6 +794,10 @@ class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
         else:
             self.taskLive = LiveMovement('')
             self.taskLive.finished.connect(self.handleLiveMovementEnd)
+            self.taskLive.message='X1Y01'
+            self.combo_targetwell.setCurrentIndex(0)
+            self.taskLive.run()
+            self.taskLive.wait()
             self.cap_obj = cv2.VideoCapture(self.vid_index) 
           
             self.buttonStartLive.setEnabled(False)
@@ -812,24 +819,42 @@ class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
             self.groupBox_CamParam.setEnabled(True)
             self.groupBox_Navigator.setEnabled(True)
             self.timerCamera.start(0)
+            
         
             
         
     def StopLive(self):
-        self.timerCamera.stop()
-        self.taskLive.endtask()
-        self.cap_obj.release()
-        self.cap_obj={}
-        
+       
         self.buttonStartLive.setEnabled(True)
         self.buttonStopLive.setEnabled(False)
         self.groupBox_Focus.setEnabled(False)
         self.groupBox_CamParam.setEnabled(False)
         self.groupBox_Navigator.setEnabled(False)
         self.status_LiveMode.setText('Live Mode OFF')
+        self.taskLive.message='zr'
+        self.taskLive.start()
+        time.sleep(.1)
+        self.taskLive.wait()
+        self.Lens_Current[0]=0
+        self.Lens_Current[1]=0
+        self.sliderFocuserCoarse.setValue(0)
+        self.sliderFocuserFine.setValue(0)
         p = QPixmap(640,360)
         p.fill(Qt.blue)
         self.label_CanvasLive.setPixmap(p)
+        self.timerCamera.stop()
+        while self.timerCamera.isActive():
+            continue
+        self.taskLive.endtask()
+        self.taskLive.wait()
+        self.cap_obj.release()
+        self.cap_obj=None
+        
+        
+        
+        
+        
+        
     
     def eventFilter(self,obj,event):
         if obj.objectName()== "label_CanvasLive" and event.type()==5:
@@ -883,10 +908,31 @@ class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
         self.status_LiveMode.setText("")
     
     def Getframe(self):
-        ret,frame = self.cap_obj.read()
-        pixmap = QPixmap.fromImage(self.ToQImage(frame), Qt.AutoColor)
-        pixmap = pixmap.scaled(self.label_CanvasLive.width(), self.label_CanvasLive.height(),Qt.KeepAspectRatio)
-        self.label_CanvasLive.setPixmap(pixmap)
+        if self.cap_obj:
+            ret,frame = self.cap_obj.read()
+            
+            # Put Scale Bar for  100 micrometers
+            cv2.line(frame,(1600,1000),(1600+form.pix100um,1000),(255,0,0),5)
+            cv2.line(frame,(1600,990),(1600,1010),(255,0,0),5)
+            cv2.line(frame,(1600+form.pix100um,990),(1600+form.pix100um,1010),(255,0,0),5)
+            
+            
+            pixmap = QPixmap.fromImage(self.ToQImage(frame), Qt.AutoColor)
+            
+            pixmap = pixmap.scaled(self.label_CanvasLive.width(), self.label_CanvasLive.height(),Qt.KeepAspectRatio)
+            painter = QPainter()
+            painter.begin(pixmap)
+            font = painter.font()
+            font.setPointSize(14)
+            painter.setFont(font)
+            pen = QPen(Qt.blue, 3)
+            painter.setPen(pen)
+            painter.drawText(550,330,"100 um")
+            painter.end()
+            self.label_CanvasLive.setPixmap(pixmap)
+        else:
+            self.timerCamera.stop()
+       
         
     
     
@@ -900,7 +946,13 @@ class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
         file_single= 'SnapShot_{}_{}_{}_{}_{}_{}_P'.format(pctime[0],pctime[1],pctime[2],pctime[3],pctime[4],pctime[5])
         flag =False
         while not flag:
-            flag, frame = self.cap_obj.read()
+            flag, frame = self.cap_obj.read()#
+        
+        # Put Scale Bar for  100 micrometers
+        cv2.line(frame,(1600,1000),(1600+form.pix100um,1000),(255,0,0),5)
+        cv2.line(frame,(1600,990),(1600,1010),(255,0,0),5)
+        cv2.line(frame,(1600+form.pix100um,990),(1600+form.pix100um,1010),(255,0,0),5)
+        cv2.putText(frame, "100 um", (1650,990), cv2.FONT_HERSHEY_PLAIN, 3, 255)
         
         cv2.imwrite(file_single + str(self.ssc) + '.jpg',frame)
         self.ssc=self.ssc+1
@@ -1139,50 +1191,59 @@ class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
         self.combo_rows.setCurrentIndex(2*val+2)
         
     def changeCoarseLenslevel(self,level):
-        
+        print "Target:",level,"Current:",self.Lens_Current
         if level>self.Lens_Current[0]:
             for c in range(level-self.Lens_Current[0]):
-                self.taskLive.message='Zp'
-                self.taskLive.start()
-                print "Lens Up"
-        elif level<self.Lens_Current[0]:
-            for c in range(self.Lens_Current[0]-level):
                 self.taskLive.message='Zn'
                 self.taskLive.start()
                 print "Lens Down"
+                self.taskLive.wait()
+        elif level<self.Lens_Current[0]:
+            for c in range(self.Lens_Current[0]-level):
+                self.taskLive.message='Zp'
+                self.taskLive.start()
+                print "Lens Up"
+                self.taskLive.wait()
         time.sleep(.1)
         self.Lens_Current[0] = level
         
     def changeFineLenslevel(self,level):
-        
+        print "Target:",level,"Current:",self.Lens_Current
         if level>self.Lens_Current[1]:
             for c in range(level-self.Lens_Current[1]):
-                self.taskLive.message='zp'
-                self.taskLive.start()
-                print "FineFocus: Lens Up"
-        elif level<self.Lens_Current[1]:
-            for c in range(self.Lens_Current[1]-level):
                 self.taskLive.message='zn'
                 self.taskLive.start()
                 print "FineFocus: Lens Down"
+                self.taskLive.wait()
+        elif level<self.Lens_Current[1]:
+            for c in range(self.Lens_Current[1]-level):
+                self.taskLive.message='zp'
+                self.taskLive.start()
+                print "FineFocus: Lens Up"
+                self.taskLive.wait()
         time.sleep(.1)
         self.Lens_Current[1] = level   
         print self.Lens_Current
             
         
     def setLensOrigin(self):
-        self.Lens_Current = np.array([10,8])
-        self.sliderFocuserCoarse.setValue(10)
-        self.sliderFocuserFine.setValue(8)
+        self.Lens_Current = np.array([0,0])
+        self.sliderFocuserCoarse.setValue(0)
+        self.sliderFocuserFine.setValue(0)
         
     def LensToOrigin(self):
-        self.moveLens(10,8)
-        self.sliderFocuserCoarse.setValue(10)
-        self.sliderFocuserFine.setValue(8)
+        self.taskLive.message='zr'
+        self.taskLive.start()
+        time.sleep(.1)
+        print "."
+        self.taskLive.wait()
+        #self.moveLens(0,0)
+        self.sliderFocuserCoarse.setValue(0)
+        self.sliderFocuserFine.setValue(0)
     
     def LensSavePosition(self):
         coor = self.Wellname2Coordinate(self.combo_targetwell.currentText())
-        print coor
+        self.updateStatus("Saved focus for current well...")  
         self.list_wellinfo[coor].FocusCoarse = self.sliderFocuserCoarse.value()
         self.list_wellinfo[coor].FocusFine = self.sliderFocuserFine.value()
         
@@ -1192,14 +1253,14 @@ class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
         Fsteps=F_target - self.Lens_Current[1]
         
         if Csteps>0:
-            command1='Zp'
-        elif Csteps<0:
             command1='Zn'
+        elif Csteps<0:
+            command1='Zp'
         
         if Fsteps>0:
-            command2='zp'
-        elif Fsteps<0:
             command2='zn'
+        elif Fsteps<0:
+            command2='zp'
         print "C"
         
         for i in range(abs(Csteps)):
@@ -1219,21 +1280,8 @@ class MainDialog(QMainWindow,Gui_IncuStream.Ui_MainWindow):
         
         self.Lens_Current=np.array([C_target,F_target])
         print "Finished Movement"
-            
-            
-
-    
-    
-    
-    
-    
     
 ###### END OF MAIN WINDOW CLASS ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-    
-    
-    
-    
-    
     
 class updatebackgroundTASK(QThread):
     status_updater =pyqtSignal(str)
@@ -1322,8 +1370,6 @@ class updatebackgroundTASK(QThread):
             self.status_updater.emit(message)
                     
             return False
-                    
-   
         
 class serialTask(QThread):
     status_updater =pyqtSignal(str)
@@ -1399,13 +1445,9 @@ class serialTask(QThread):
                             fs = form.subgrid_params.decimation 
                             IMROWS =  Nr*1080*fs
                             IMCOLS =  1920*fs
-                            reading = True;
                             
                             ser.write("r" + str(form.subgrid_params.Nrows) + "c" + str(form.subgrid_params.Ncols))
-                            while reading:
-                                inByte=ser.read()
-                                if inByte=="O":
-                                    reading = False
+                            waitMessage('O',ser)
                             grid_counter=0    
                             message="Subgrid set to (" + str(Nr) + ',' + str(Nc) + ")"
                             form.addlog(message)
@@ -1429,20 +1471,22 @@ class serialTask(QThread):
                             form.addlog(message)
                             self.status_updater.emit(message)
                             LensC, LensF= form.Count2LensCF(local_counter)
-                                                       
+                            print LensC,LensF
+                            
                             #Lens Movement
+                            
                             Csteps= LensC - form.Lens_Current[0]
                             Fsteps= LensF - form.Lens_Current[1]
                             
                             if Csteps>0:
-                                command1='Zp'
-                            elif Csteps<0:
                                 command1='Zn'
+                            elif Csteps<0:
+                                command1='Zp'
                             
                             if Fsteps>0:
-                                command2='zp'
-                            elif Fsteps<0:
                                 command2='zn'
+                            elif Fsteps<0:
+                                command2='zp'
                             
                             for i in range(abs(Csteps)):
                                 ser.write(command1)
@@ -1456,6 +1500,7 @@ class serialTask(QThread):
                             time.sleep(.1)
                             
                             
+                            
                              
                             if not(form.subgrid_params.flag):
                                 ret = False
@@ -1463,10 +1508,16 @@ class serialTask(QThread):
                                     ret, init_frame = cap.read()
                                     ret, init_frame = cap.read()
                                     time.sleep(.2)   
-                                init_frame = init_frame-form.IM_BACKGND
+                                #init_frame = init_frame-form.IM_BACKGND
                                 cv2.putText(init_frame,"Incu-Stream", (5,25), cv2.FONT_HERSHEY_PLAIN, 2, 255)
                                 cv2.putText(init_frame,form.plate_type[form.plate_current][0], (5,60), cv2.FONT_HERSHEY_PLAIN, 2, 255)
                                 cv2.putText(init_frame, "Well: " + name, (5,95), cv2.FONT_HERSHEY_PLAIN, 2, 255)
+                                
+                                cv2.line(init_frame,(1600,1000),(1600+form.pix100um,1000),(255,0,0),5)
+                                cv2.line(init_frame,(1600,990),(1600,1010),(255,0,0),5)
+                                cv2.line(init_frame,(1600+form.pix100um,990),(1600+form.pix100um,1010),(255,0,0),5)
+                                cv2.putText(init_frame, "100 um", (1650,990), cv2.FONT_HERSHEY_PLAIN, 3, 255)
+                                
                                 cv2.imwrite(name + "_" + str(form.repeats)  + ".jpg" , init_frame,(cv2.cv.CV_IMWRITE_JPEG_QUALITY,100))
                                 time.sleep(.1)
                                 
@@ -1484,9 +1535,11 @@ class serialTask(QThread):
                                 ser.write('G') # Go-to min_x, min_y for current well
                                 time.sleep(.1)
                                 mainframe = np.zeros((IMROWS,IMCOLS*Nc,3),dtype='uint8');
+                                in_first = True
         
                                 for grid_cols in range(Nc):
                                     for grid_rows in range(Nr):
+                                        
                                         not_shaked=True;
                                         print "Entering", grid_rows+1, grid_cols+1
                                         while (not_shaked):
@@ -1516,8 +1569,16 @@ class serialTask(QThread):
                                             #subframe = cv2.resize(subframe.astype('float32'),None,None,fs,fs)
                                             print "in"
                                             #subframe = cv2.cvtColor(subframe,cv2.COLOR_BGR2RGB) - (form.IM_BACKGND)
-                                            subframe = cv2.subtract(subframe ,cv2.cvtColor(form.IM_BACKGND,cv2.COLOR_BGR2RGB))
+                                            subframe = cv2.subtract(subframe+25 ,cv2.cvtColor(form.IM_BACKGND,cv2.COLOR_BGR2RGB))
                                             print "out"
+                                            # Put Scale to the first frame
+                                            if in_first:
+                                                cv2.line(subframe,(400,1000),(400 + 5*form.pix100um,1000),(255,0,0),5)
+                                                cv2.line(subframe,(400,990),(400,1010),(255,0,0),5)
+                                                cv2.line(subframe,(400 + 5*form.pix100um,990),(400 + 5*form.pix100um,1010),(255,0,0),5)
+                                                cv2.putText(subframe, "500 um", (900,990), cv2.FONT_HERSHEY_PLAIN, 6, (255,0,0))
+                                                in_first = False
+                                                
                                             subframe = cv2.resize(subframe,None,None,fs,fs)
                                             #subframe = makehomogen(subframe,offset=125)
 
@@ -1554,24 +1615,20 @@ class serialTask(QThread):
                                     if inByte=='W':
                                         not_shaked=False
                                 
-                                cv2.putText(mainframe,"Incu-Stream", (5,25), cv2.FONT_HERSHEY_PLAIN, 2*Nc*Nr*fs, 255)
-                                cv2.putText(mainframe,form.plate_type[form.plate_current][0], (5,60), cv2.FONT_HERSHEY_PLAIN, 2, 255)
-                                cv2.putText(mainframe, "Well: " + name, (5,95), cv2.FONT_HERSHEY_PLAIN, 2, 255)
+                                cv2.putText(mainframe,"Incu-Stream", (5,40), cv2.FONT_HERSHEY_PLAIN, 4, 255)
+                                cv2.putText(mainframe,form.plate_type[form.plate_current][0], (5,85), cv2.FONT_HERSHEY_PLAIN, 4, 255)
+                                cv2.putText(mainframe, "Well: " + name, (5,130), cv2.FONT_HERSHEY_PLAIN, 4, 255)
+                                
                                 # ROW COL EKLE!
                                 if form.repeatFLAG:
-                                    cv2.putText(mainframe, "Cycle: " + str(form.repeats) , (5,130), cv2.FONT_HERSHEY_PLAIN, 2, 255)
+                                    cv2.putText(mainframe, "Cycle: " + str(form.repeats) , (5,175), cv2.FONT_HERSHEY_PLAIN, 4 , 255)
                                 cv2.imwrite(name + "_" + str(form.repeats)  + ".jpg" ,mainframe,(cv2.cv.CV_IMWRITE_JPEG_QUALITY,100))
                                 time.sleep(.1)
                                 del mainframe
-                                
-                                
-
                             local_counter = local_counter +1
-                          
                             message = name + ": Saving Image..." 
                             form.addlog(message)
                             self.status_updater.emit(message)
-
                         ser.write('F') # Finish
                         
                         if form.repeatFLAG:
@@ -1607,8 +1664,6 @@ class serialTask(QThread):
                 self.message="Port can not be opened..."
                 self.status_updater.emit(self.message)
                 sendStatus(self.message)
-                
-    
         
 class LiveMovement(QThread):
     def __init__(self,message,parent=None):
@@ -1653,11 +1708,6 @@ class LiveMovement(QThread):
         self.serial_obj.close()
         self.terminate()
 
-        
-            
-            
-         
-
 class wellinfo(object):
         def __init__(self):
                 self.Well_ID=''
@@ -1668,8 +1718,8 @@ class wellinfo(object):
                 self.Compounds=''
                 self.CompConst=''
                 self.CompUnits=-1
-                self.FocusCoarse = 10
-                self.FocusFine = 8
+                self.FocusCoarse = 0
+                self.FocusFine = 0
 
 def AutoFocus(max_steps,vid,port):
     
@@ -1745,7 +1795,6 @@ def cartesianGrid(pic,W,H,Ox,Oy,C,R):
     for rows in range(R+1):
         pic.drawLine(Ox+rangeX[0]*W/2.0, Oy+rangeY[rows]*H/2 ,Ox+rangeX[-1]*W/2.0,Oy+rangeY[rows]*H/2)
     
-
 def sendStatus(msg):
     if form.groupBox_Mail.isChecked():
         fromaddr = form.lineSender.text().toLocal8Bit().data()
@@ -1885,7 +1934,7 @@ def waitMessage(char,serial):
         if inByte==char:
             not_shaked=False
     
-
+    
             
         
         

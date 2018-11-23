@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '.\Gui_IncuStream.ui'
+# Form implementation generated from reading ui file 'Gui_IncuStream.ui'
 #
-# Created: Thu Sep 06 10:27:31 2018
+# Created: Fri Nov 02 08:50:56 2018
 #      by: PyQt4 UI code generator 4.11.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -789,10 +789,11 @@ class Ui_MainWindow(object):
         self.sliderFocuserCoarse = QtGui.QSlider(self.groupBox_Focus)
         self.sliderFocuserCoarse.setGeometry(QtCore.QRect(70, 10, 341, 31))
         self.sliderFocuserCoarse.setMinimumSize(QtCore.QSize(250, 0))
-        self.sliderFocuserCoarse.setMinimum(1)
-        self.sliderFocuserCoarse.setMaximum(20)
+        self.sliderFocuserCoarse.setMinimum(0)
+        self.sliderFocuserCoarse.setMaximum(39)
         self.sliderFocuserCoarse.setPageStep(2)
-        self.sliderFocuserCoarse.setProperty("value", 10)
+        self.sliderFocuserCoarse.setProperty("value", 0)
+        self.sliderFocuserCoarse.setSliderPosition(0)
         self.sliderFocuserCoarse.setTracking(False)
         self.sliderFocuserCoarse.setOrientation(QtCore.Qt.Horizontal)
         self.sliderFocuserCoarse.setInvertedAppearance(False)
@@ -802,11 +803,11 @@ class Ui_MainWindow(object):
         self.sliderFocuserCoarse.setObjectName(_fromUtf8("sliderFocuserCoarse"))
         self.sliderFocuserFine = QtGui.QSlider(self.groupBox_Focus)
         self.sliderFocuserFine.setGeometry(QtCore.QRect(70, 40, 341, 20))
-        self.sliderFocuserFine.setMinimum(1)
-        self.sliderFocuserFine.setMaximum(16)
+        self.sliderFocuserFine.setMinimum(-5)
+        self.sliderFocuserFine.setMaximum(5)
         self.sliderFocuserFine.setPageStep(4)
-        self.sliderFocuserFine.setProperty("value", 8)
-        self.sliderFocuserFine.setSliderPosition(8)
+        self.sliderFocuserFine.setProperty("value", 0)
+        self.sliderFocuserFine.setSliderPosition(0)
         self.sliderFocuserFine.setOrientation(QtCore.Qt.Horizontal)
         self.sliderFocuserFine.setTickPosition(QtGui.QSlider.TicksBelow)
         self.sliderFocuserFine.setTickInterval(1)
@@ -829,6 +830,7 @@ class Ui_MainWindow(object):
         self.buttonLensSavePosition.setMaximumSize(QtCore.QSize(90, 16777215))
         self.buttonLensSavePosition.setObjectName(_fromUtf8("buttonLensSavePosition"))
         self.buttonLensSetOrigin = QtGui.QPushButton(self.groupBox_Focus)
+        self.buttonLensSetOrigin.setEnabled(False)
         self.buttonLensSetOrigin.setGeometry(QtCore.QRect(10, 70, 90, 23))
         self.buttonLensSetOrigin.setMaximumSize(QtCore.QSize(90, 16777215))
         self.buttonLensSetOrigin.setObjectName(_fromUtf8("buttonLensSetOrigin"))
@@ -1208,7 +1210,7 @@ class Ui_MainWindow(object):
         MainWindow.setTabOrder(self.buttonStopLive, self.comboBox_ports)
 
     def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(_translate("MainWindow", "Incu-Scope", None))
+        MainWindow.setWindowTitle(_translate("MainWindow", "Incu-Stream v1.0", None))
         self.groupBox_Setup.setTitle(_translate("MainWindow", "Plate Type / Acquisition", None))
         self.groupBox_2.setTitle(_translate("MainWindow", "Plate Type", None))
         self.Group_subgrid.setTitle(_translate("MainWindow", "Subgrid Capturing", None))
