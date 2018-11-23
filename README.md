@@ -4,5 +4,5 @@ This repository involves
   - **Schematics and pcb**: Circuit schematics and PCB layout files of Incu-stream control electronics.
   - **Software**: Involves C codes (for Atmega328) and Python codes (for Incu-stream user interface)
  
- This study is submitted to *Electronics, MDPI* journal and under-review.
+ **This study is submitted to *Electronics, MDPI* journal and under-review (23 Nov 2018)**
   
