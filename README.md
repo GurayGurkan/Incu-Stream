@@ -10,5 +10,5 @@ For suggestions and questions, please e-mail to: **g.gurkan@iku.edu.tr**
 
 Cheers!
 
- **This study is submitted to *Electronics, MDPI* journal (23 Nov 2018)**
+
   
