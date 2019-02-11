@@ -10,5 +10,9 @@ For suggestions and questions, please e-mail to: **g.gurkan@iku.edu.tr**
 
 Cheers!
 
+This study is submitted for publication to IEEE on 2nd Dec 2018 and still UNDER REVIEW !!!
+Please cite this repo if you use/replicate it !!!
+Guray Gurkan
+
 
   
