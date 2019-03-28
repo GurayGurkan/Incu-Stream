@@ -1,5 +1,5 @@
 # Incu-stream 1.0 (initial version)
-**The open-hardware microplate reader system for incubators**
+**An Open-Hardware Live-Cell Imaging System Based on Low-cost Inverted Bright-field Microscopy and Automated Mechanical Scanning for Real-Time and Long-Term Imaging of Microplates in Incubator**
 
 This repository involves:
   - **CAD files**: AutoCAD drawings for housing of Incu-stream mechanical parts
