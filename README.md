@@ -1,5 +1,5 @@
 # Incu-stream 1.0 (initial version)
-**An Open-Hardware Live-Cell Imaging System Based on Low-cost Inverted Bright-field Microscopy and Automated Mechanical Scanning for Real-Time and Long-Term Imaging of Microplates in Incubator**
+**An Open-Hardware Live-Cell Imaging System Based on Inverted Bright-field Microscopy and Automated Mechanical Scanning for Real-Time and Long-Term Imaging of Microplates in Incubator**
 
 This repository involves:
   - **CAD files**: AutoCAD drawings for housing of Incu-stream mechanical parts
