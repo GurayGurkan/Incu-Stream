@@ -11,7 +11,8 @@ For suggestions and questions, please e-mail to: **g.gurkan@iku.edu.tr**
 
 Cheers!
 
-This study is submitted for publication to IEEE...
+Guray Gurkan, Koray Gurkan, "Incu-Stream 1.0: An Open-Hardware Live-Cell Imaging System Based on Inverted Bright-field Microscopy and Automated Mechanical Scanning for Real-Time and Long-Term Imaging of Microplates in Incubator", IEEE Access, 2019 (Accepted)
+
 Please cite this repo if you use/replicate it !!!
 Guray Gurkan
 
