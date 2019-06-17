@@ -11,12 +11,13 @@ For suggestions and questions, please e-mail to: **g.gurkan@iku.edu.tr**
 
 Cheers!
 
-Please cite this repo as:
+Guray Gurkan
+
+* **Please cite this repo as:** *
 
 G. Gürkan and K. Gürkan, "*Incu-Stream 1.0: An Open-Hardware Live-Cell Imaging System Based on Inverted Bright-Field Microscopy and Automated Mechanical Scanning for Real-Time and Long-Term Imaging of Microplates in Incubator*," in **IEEE Access**, vol. 7, pp. 58764-58779, 2019. **doi: 10.1109/ACCESS.2019.2914958**
 
 
-Guray Gurkan
 
 
   
