@@ -7,7 +7,7 @@ This repository involves:
   - **Software**: Involves C codes (for Atmega328) and Python codes (for Incu-stream user interface)
   - **Videos**: Demostration of device usage and example of a real-time recording acquired during C. Elegans movement.
 
-For suggestions and questions, please e-mail to: **g.gurkan@iku.edu.tr** (*not valid anymore. new e-mail: **guraygurkan@istanbul.edu.tr***)
+For suggestions and questions, please e-mail to: **~~g.gurkan@iku.edu.tr~~**} (*not valid anymore. new e-mail: **guraygurkan@istanbul.edu.tr***)
 
 Cheers!
 
